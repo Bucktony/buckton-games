@@ -24,21 +24,37 @@ const BUILTIN=(window.BUILTIN_LEVELS||[]), CUSTOM=(window.CUSTOM_LEVELS||[]);
 let playlist=[],li=0,grid=null,R=0,C=0,totalStars=0,levelStars=0;
 function loadLevel(lv){
   let g=lv.grid.map(r=>r.replace(/ /g,'.'));const w=Math.max(...g.map(r=>r.length));g=g.map(r=>r.padEnd(w,'#'));
-  const portrait=innerHeight>innerWidth; if((g.length<w)===portrait&&g.length!==w){g=Array.from({length:w},(_,c)=>g.map(r=>r[c]).join(''))}
+  const portrait=innerHeight>innerWidth;areas=(lv.areas||[]).map(a=>({...a}));if((g.length<w)===portrait&&g.length!==w){g=Array.from({length:w},(_,c)=>g.map(r=>r[c]).join(''));areas=areas.map(a=>({...a,r0:a.c0,c0:a.r0,r1:a.c1,c1:a.r1}))}
   grid=g.map(r=>r.split(''));R=grid.length;C=grid[0].length;stars=[];
   for(let r=0;r<R;r++)for(let c=0;c<C;c++){const ch=grid[r][c];if(ch==='S'){F.r=r;F.c=c;F.x=c;F.y=r}if(ch==='E'){hole.r=r;hole.c=c}if(ch==='*')stars.push({r,c,got:false,ph:Math.random()*6})}
-  F.path=[];F.bump=0;F.cheek=0;F.dir=1;hole.size=1;hole.bites=0;levelStars=0;state='play';parts=[];target=null;
-  $("lvl").textContent=playlist===BUILTIN?`Level ${li+1}`:lv.name;updHud();layout();
+  curArea=-1;banner=null;F.path=[];F.bump=0;F.cheek=0;F.dir=1;hole.size=1;hole.bites=0;levelStars=0;state='play';parts=[];target=null;
+  $("lvl").textContent=playlist===BUILTIN?`Level ${li+1}`:lv.name;updHud();layout();areaCheck();snapCam();
 }
 const open=(r,c)=>r>=0&&c>=0&&r<R&&c<C&&grid[r][c]!=='#';
 // ---------- state ----------
 const F={r:0,c:0,x:0,y:0,path:[],bump:0,bx:0,by:0,cheek:0,dir:1,t:0};
 const hole={r:0,c:0,size:1,bites:0};
+let areas=[],curArea=-1,banner=null,camMode=false,camX=0,camY=0,viewTop=0,viewW=0,viewH=0,lastPtr=null;
 let stars=[],parts=[],state='menu',tState=0,target=null,keyDir=null,cell=40,ox=0,oy=0,dpr=1,W=0,H=0,lastBump=0;
 const bg=Array.from({length:180},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.8+.4,p:Math.random()*6}));
 function layout(){dpr=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
-  if(!grid)return;const top=Math.min(80,H*.11);cell=Math.floor(Math.min((W-16)/C,(H-top-12)/R));ox=(W-cell*C)/2;oy=top+(H-top-12-cell*R)/2}
+  if(!grid)return;const top=Math.min(80,H*.11);viewTop=top;viewW=W;viewH=H-top-12;
+  const fit=Math.floor(Math.min((W-16)/C,(H-top-12)/R));
+  // big mazes: keep tiles a comfortable touch size and use a gentle camera instead of shrinking
+  camMode=fit<26;cell=camMode?Math.round(Math.max(34,Math.min(48,Math.min(W,H)/13))):fit;
+  if(!camMode){ox=(W-cell*C)/2;oy=top+(H-top-12-cell*R)/2}else{snapCam()}}
 addEventListener('resize',()=>{layout()});
+function areaAt(r,c){for(let i=0;i<areas.length;i++){const a=areas[i];if(r>=a.r0&&r<=a.r1&&c>=a.c0&&c<=a.c1)return i}return -1}
+function areaCheck(){if(!areas.length)return;const a=areaAt(F.r,F.c);if(a<0)return;if(curArea>=0){const k=areas[curArea];if(F.r>k.r0&&F.r<k.r1&&F.c>k.c0&&F.c<k.c1)return}
+  if(a!==curArea){curArea=a;banner={text:(areas[a].emoji?areas[a].emoji+' ':'')+areas[a].name,t:performance.now()/1000};if(state==='play')SND.flap()}}
+function camTarget(){const fx=(F.x+.5)*cell,fy=(F.y+.5)*cell;let x0=0,y0=0,x1=C*cell,y1=R*cell;
+  if(curArea>=0){const a=areas[curArea];x0=a.c0*cell;x1=(a.c1+1)*cell;y0=a.r0*cell;y1=(a.r1+1)*cell}
+  const ax=(lo,hi,f,v)=>hi-lo<=v?(lo+hi)/2-v/2:Math.max(lo,Math.min(hi-v,f-v/2));
+  const fitAx=(tot,v,t)=>tot<=v?(tot-v)/2:Math.max(0,Math.min(tot-v,t));
+  return[fitAx(C*cell,viewW,ax(x0,x1,fx,viewW)),fitAx(R*cell,viewH,ax(y0,y1,fy,viewH))]}
+function snapCam(){if(!grid||!camMode)return;[camX,camY]=camTarget();ox=-camX;oy=viewTop-camY}
+function updCam(dt){if(!camMode)return;const[tx,ty]=camTarget();const k=Math.min(1,dt*3.2);camX+=(tx-camX)*k;camY+=(ty-camY)*k;ox=Math.round(-camX);oy=Math.round(viewTop-camY)}
+function areaColor(r,c){const i=areaAt(r,c);return i<0?null:areas[i].color}
 function updHud(){$('stars').textContent='⭐ '+(totalStars)}
 // ---------- input ----------
 const KEYS={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
@@ -46,8 +62,8 @@ addEventListener('keydown',e=>{if(KEYS[e.key]&&state==='play'){keyDir=KEYS[e.key
 addEventListener('keyup',e=>{if(KEYS[e.key]&&keyDir===KEYS[e.key])keyDir=null});
 let down=false;
 function toCell(e){return{r:(e.clientY-oy)/cell-.5,c:(e.clientX-ox)/cell-.5}}
-cv.addEventListener('pointerdown',e=>{if(state!=='play')return;down=true;ac();target=toCell(e);keyDir=null;cv.setPointerCapture(e.pointerId)});
-cv.addEventListener('pointermove',e=>{if(down&&state==='play')target=toCell(e)});
+cv.addEventListener('pointerdown',e=>{if(state!=='play')return;down=true;ac();lastPtr={clientX:e.clientX,clientY:e.clientY};target=toCell(e);keyDir=null;cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{if(down&&state==='play'){lastPtr={clientX:e.clientX,clientY:e.clientY};target=toCell(e)}});
 const up=()=>{down=false};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
 function bump(dr,dc){const now=performance.now();if(now-lastBump<450)return;lastBump=now;F.bump=1;F.bx=dc;F.by=dr;SND.bump()}
 function chooseStep(){
@@ -106,8 +122,10 @@ function drawBg(t){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#
   ctx.fillStyle='#f0a85a';ctx.beginPath();ctx.arc(W*.88,H*.85,Math.min(W,H)*.07,0,7);ctx.fill();ctx.strokeStyle='rgba(255,230,170,.7)';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(W*.88,H*.85,Math.min(W,H)*.12,Math.min(W,H)*.025,-.2,0,7);ctx.stroke();
   ctx.fillStyle='#6fc8ff';ctx.beginPath();ctx.arc(W*.08,H*.2,Math.min(W,H)*.04,0,7);ctx.fill()}
 function drawMaze(t){
-  for(let r=0;r<R;r++)for(let c=0;c<C;c++){const x=ox+c*cell,y=oy+r*cell;
-    if(grid[r][c]==='#'){ctx.fillStyle='#5b3aa8';rr(x+1,y+1,cell-2,cell-2,cell*.28);ctx.fillStyle='rgba(255,255,255,.18)';rr(x+cell*.15,y+cell*.12,cell*.7,cell*.22,cell*.11)}
+  const rA=Math.max(0,Math.floor((viewTop-oy)/cell)-1),rB=Math.min(R-1,Math.ceil((H-oy)/cell)),cA=Math.max(0,Math.floor(-ox/cell)-1),cB=Math.min(C-1,Math.ceil((W-ox)/cell));
+  if(areas.length)for(const a of areas){ctx.fillStyle=a.color+'22';ctx.fillRect(ox+a.c0*cell,oy+a.r0*cell,(a.c1-a.c0+1)*cell,(a.r1-a.r0+1)*cell)}
+  for(let r=camMode?rA:0;r<=(camMode?rB:R-1);r++)for(let c=camMode?cA:0;c<=(camMode?cB:C-1);c++){const x=ox+c*cell,y=oy+r*cell;
+    if(grid[r][c]==='#'){ctx.fillStyle=(areas.length&&areaColor(r,c))||'#5b3aa8';rr(x+1,y+1,cell-2,cell-2,cell*.28);ctx.fillStyle='rgba(255,255,255,.18)';rr(x+cell*.15,y+cell*.12,cell*.7,cell*.22,cell*.11)}
     else{ctx.fillStyle='rgba(255,255,255,.06)';ctx.fillRect(x,y,cell,cell)}}
   for(const s of stars)if(!s.got){const x=ox+(s.c+.5)*cell,y=oy+(s.r+.5)*cell,p=1+.12*Math.sin(t*4+s.ph);ctx.fillStyle='rgba(255,230,90,.25)';ctx.beginPath();ctx.arc(x,y,cell*.42*p,0,7);ctx.fill();star5(x,y,cell*.34*p,'#ffe033')}
   // start pad
@@ -120,11 +138,12 @@ function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/
   if(state==='play'||state==='nom'){
     drawBg(t);drawMaze(t);
     const hx=ox+(hole.c+.5)*cell,hy=oy+(hole.r+.5)*cell;
+    updCam(dt);if(down&&lastPtr&&state==='play')target=toCell(lastPtr);
     if(state==='play'){
       // movement
       const moving=F.path.length>0;
       if(!moving){const st=chooseStep();if(st){F.path.push([F.r+st[0],F.c+st[1]]);if(st[1])F.dir=st[1]}}
-      if(F.path.length){const [nr,nc]=F.path[0];const sp=6.5*dt;const dx=nc-F.x,dy=nr-F.y,d=Math.hypot(dx,dy);if(d<=sp){F.x=nc;F.y=nr;F.r=nr;F.c=nc;F.path.shift();arrive()}else{F.x+=dx/d*sp;F.y+=dy/d*sp}
+      if(F.path.length){const [nr,nc]=F.path[0];const sp=6.5*dt;const dx=nc-F.x,dy=nr-F.y,d=Math.hypot(dx,dy);if(d<=sp){F.x=nc;F.y=nr;F.r=nr;F.c=nc;F.path.shift();areaCheck();arrive()}else{F.x+=dx/d*sp;F.y+=dy/d*sp}
         if(Math.random()<.5)parts.push({x:ox+(F.x+.5)*cell-F.dir*cell*.2,y:oy+(F.y+.6)*cell,vx:(Math.random()-.5),vy:Math.random()*.5,life:1,c:['#fff6a8','#ffd1f2','#bfe8ff'][Math.random()*3|0],s:Math.random()*4+2,st:true})}
       drawHole(hx,hy,cell*.6*(1+.05*Math.sin(t*3)),t,1);
     }else{ // nom sequence
@@ -141,6 +160,7 @@ function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/
     drawParts(dt);
     const bx=F.bump>0?Math.sin(F.bump*Math.PI)*.18:0;F.bump=Math.max(0,F.bump-dt*4);
     drawFairy(ctx,ox+(F.x+.5+F.bx*bx)*cell,oy+(F.y+.45+F.by*bx)*cell+Math.sin(t*4)*cell*.05,cell/80,t,F.dir,0);
+    if(banner){const u=performance.now()/1000-banner.t;if(u<2.8){const a=Math.min(1,u/.4,(2.8-u)/.5);ctx.save();ctx.globalAlpha=a;const fs=Math.max(20,Math.min(34,W/16));ctx.font=`bold ${fs}px "Trebuchet MS",sans-serif`;const tw=ctx.measureText(banner.text).width+44,bx=W/2-tw/2,by=viewTop+10+(1-a)*-10;ctx.fillStyle='rgba(40,20,90,.75)';rr(bx,by,tw,fs+22,(fs+22)/2);ctx.fillStyle='#fff6c8';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(banner.text,W/2,by+(fs+22)/2);ctx.restore()}else banner=null}
     if(target&&down){ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ox+(target.c+.5)*cell,oy+(target.r+.5)*cell,cell*.3,0,7);ctx.stroke()}
   }else{drawBg(t);drawParts(dt);if(state==='yummyWait'||state==='done'){if(Math.random()<.4)burst(Math.random()*W,-10,1,['#ff6ec7','#ffe033','#7fe0ff','#9dffad','#c77dff'],2)}}
   requestAnimationFrame(frame)}
@@ -159,8 +179,8 @@ $('homeBtn').onclick=()=>{state='menu';grid=null;show('start')};
 $('mazesBtn').onclick=()=>{ac();saveName();buildMazes();show('mazes')};
 $('mazesBack').onclick=()=>show('start');
 function buildMazes(){const L=$('mazeList');L.innerHTML='';if(!CUSTOM.length){L.innerHTML='<div class="big">No mazes yet! Draw one on paper ✏️</div>';return}
-  let pg=null;const anyGroup=CUSTOM.some(l=>l.group);CUSTOM.forEach((lv,i)=>{const grp=lv.group||'✏️ Our Drawings';if(anyGroup&&grp!==pg){pg=grp;const h=document.createElement('div');h.className='mzh';h.textContent=grp==='More Mazes'?'✨ More Mazes':grp;L.appendChild(h)}const d=document.createElement('div');d.className='mz';const c=document.createElement('canvas');const g=lv.grid,rr_=g.length,cc=Math.max(...g.map(r=>r.length)),s=Math.floor(240/Math.max(rr_,cc));c.width=cc*s;c.height=rr_*s;const x=c.getContext('2d');
-    g.forEach((row,r)=>[...row].forEach((ch,k)=>{x.fillStyle=ch==='#'?'#7a55d6':ch==='S'?'#ff6ec7':ch==='E'?'#c77dff':ch==='*'?'#ffe033':'#2a1660';x.fillRect(k*s,r*s,s,s)}));
+  let pg=null;const anyGroup=CUSTOM.some(l=>l.group);CUSTOM.forEach((lv,i)=>{const grp=lv.group||'✏️ Our Drawings';if(anyGroup&&grp!==pg){pg=grp;const h=document.createElement('div');h.className='mzh';h.textContent=grp==='More Mazes'?'✨ More Mazes':grp==='Giant Adventures'?'🌌 Giant Adventures':grp;L.appendChild(h)}const d=document.createElement('div');d.className='mz';const c=document.createElement('canvas');const g=lv.grid,rr_=g.length,cc=Math.max(...g.map(r=>r.length)),s=Math.floor(240/Math.max(rr_,cc));c.width=cc*s;c.height=rr_*s;const x=c.getContext('2d');
+    g.forEach((row,r)=>[...row].forEach((ch,k)=>{const ac_=(lv.areas||[]).find(a=>r>=a.r0&&r<=a.r1&&k>=a.c0&&k<=a.c1);x.fillStyle=ch==='#'?(ac_?ac_.color:'#7a55d6'):ch==='S'?'#ff6ec7':ch==='E'?'#c77dff':ch==='*'?'#ffe033':'#2a1660';x.fillRect(k*s,r*s,s,s)}));
     d.appendChild(c);d.appendChild(document.createTextNode(lv.name));d.onclick=()=>startPlaylist(CUSTOM.slice(i));L.appendChild(d)})}
 // start screen controls
 const nameEl=$('name');nameEl.value=fairyName;function saveName(){fairyName=(nameEl.value.trim()||'Floaty').slice(0,14);store.set('name',fairyName)}
@@ -177,6 +197,6 @@ recBtn.onclick=async()=>{try{ac();const stream=await navigator.mediaDevices.getU
   mr.onstop=()=>{stream.getTracks().forEach(t=>t.stop());recBtn.classList.remove('recording');recBtn.textContent='🎤 Record your NOM NOM!';const blob=new Blob(chunks,{type:mr.mimeType||'audio/webm'});const fr=new FileReader();fr.onload=()=>{recURL=fr.result;store.set('nom',recURL);recUI();playNom()};fr.readAsDataURL(blob)};
   mr.start();recBtn.classList.add('recording');recBtn.textContent='🔴 Say NOM NOM!';setTimeout(()=>mr.state!=='inactive'&&mr.stop(),2000)}catch(e){recBtn.textContent='🎤 Mic not allowed';setTimeout(()=>recBtn.textContent='🎤 Record your NOM NOM!',2500)}};
 // test hook
-window.__fm={get state(){return state},get level(){return li},get grid(){return grid},F,hole,levels:()=>({builtin:BUILTIN.length,custom:CUSTOM.length})};
+window.__fm={get cam(){return{camMode,camX,camY,cell,curArea,area:curArea>=0?areas[curArea].name:null,ox,oy}},get state(){return state},get level(){return li},get grid(){return grid},F,hole,levels:()=>({builtin:BUILTIN.length,custom:CUSTOM.length})};
 layout();requestAnimationFrame(frame);
 })();
