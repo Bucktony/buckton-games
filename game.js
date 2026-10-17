@@ -159,7 +159,7 @@ $('homeBtn').onclick=()=>{state='menu';grid=null;show('start')};
 $('mazesBtn').onclick=()=>{ac();saveName();buildMazes();show('mazes')};
 $('mazesBack').onclick=()=>show('start');
 function buildMazes(){const L=$('mazeList');L.innerHTML='';if(!CUSTOM.length){L.innerHTML='<div class="big">No mazes yet! Draw one on paper ✏️</div>';return}
-  CUSTOM.forEach((lv,i)=>{const d=document.createElement('div');d.className='mz';const c=document.createElement('canvas');const g=lv.grid,rr_=g.length,cc=Math.max(...g.map(r=>r.length)),s=Math.floor(240/Math.max(rr_,cc));c.width=cc*s;c.height=rr_*s;const x=c.getContext('2d');
+  let pg=null;const anyGroup=CUSTOM.some(l=>l.group);CUSTOM.forEach((lv,i)=>{const grp=lv.group||'✏️ Our Drawings';if(anyGroup&&grp!==pg){pg=grp;const h=document.createElement('div');h.className='mzh';h.textContent=grp==='More Mazes'?'✨ More Mazes':grp;L.appendChild(h)}const d=document.createElement('div');d.className='mz';const c=document.createElement('canvas');const g=lv.grid,rr_=g.length,cc=Math.max(...g.map(r=>r.length)),s=Math.floor(240/Math.max(rr_,cc));c.width=cc*s;c.height=rr_*s;const x=c.getContext('2d');
     g.forEach((row,r)=>[...row].forEach((ch,k)=>{x.fillStyle=ch==='#'?'#7a55d6':ch==='S'?'#ff6ec7':ch==='E'?'#c77dff':ch==='*'?'#ffe033':'#2a1660';x.fillRect(k*s,r*s,s,s)}));
     d.appendChild(c);d.appendChild(document.createTextNode(lv.name));d.onclick=()=>startPlaylist(CUSTOM.slice(i));L.appendChild(d)})}
 // start screen controls
