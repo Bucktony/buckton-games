@@ -45,7 +45,9 @@ def validate(g):
 
 def rebuild():
     levels=[]
-    for f in sorted(os.listdir(CDIR)):
+    def key(f):
+        m=re.search(r'^;\s*order:\s*(\d+)',open(os.path.join(CDIR,f)).read(),re.M); return (int(m.group(1)) if m else 9999,f)
+    for f in sorted([f for f in os.listdir(CDIR) if f.endswith('.txt')],key=key):
         if not f.endswith('.txt'): continue
         txt=open(os.path.join(CDIR,f)).read(); m=re.search(r'^;\s*name:\s*(.+)$',txt,re.M)
         name=m.group(1).strip() if m else f[:-4].replace('_',' ').title()
@@ -58,7 +60,7 @@ def rebuild():
     print(f'levels/custom.js: {len(levels)} custom level(s)')
 
 if __name__=='__main__':
-    ap=argparse.ArgumentParser(); ap.add_argument('file',nargs='?'); ap.add_argument('--name'); ap.add_argument('--check',action='store_true'); ap.add_argument('--rebuild',action='store_true')
+    ap=argparse.ArgumentParser(); ap.add_argument('file',nargs='?'); ap.add_argument('--name'); ap.add_argument('--check',action='store_true'); ap.add_argument('--rebuild',action='store_true'); ap.add_argument('--order',type=int,help='position in Our Mazes (lower = earlier)')
     a=ap.parse_args()
     if a.rebuild or not a.file: rebuild(); sys.exit(0)
     g=parse(open(a.file).read()); errs,ns=validate(g)
@@ -70,4 +72,4 @@ if __name__=='__main__':
     slug=re.sub(r'[^a-z0-9]+','_',name.lower()).strip('_') or 'maze'
     os.makedirs(CDIR,exist_ok=True); out=os.path.join(CDIR,slug+'.txt'); k=2
     while os.path.exists(out): out=os.path.join(CDIR,f'{slug}_{k}.txt'); k+=1
-    open(out,'w').write(f'; name: {name}\n'+'\n'.join(g)+'\n'); print('saved',out); rebuild()
+    open(out,'w').write(f'; name: {name}\n'+(f'; order: {a.order}\n' if a.order is not None else '')+'\n'.join(g)+'\n'); print('saved',out); rebuild()

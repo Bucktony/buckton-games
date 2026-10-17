@@ -32,8 +32,8 @@ Example:
    python3 add_level.py rainbow.txt --name "Rainbow Maze"
    ```
    This checks that there's one S and one E, that the black hole can be reached, and that all stars can be reached. It then saves the level to `levels/custom/rainbow_maze.txt` and regenerates `levels/custom.js`.
-   Use `--check` to validate without saving.
-4. Re-upload or redeploy the folder. The level shows up under **Our Mazes** on the start screen.
+   Use `--check` to validate without saving, and `--order N` to set the position in Our Mazes (lower comes first; files without an order go last).
+4. Re-upload or redeploy the folder. The level shows up under **Our Mazes** on the start screen. Tapping a tile plays that maze, and **Next** continues through the following custom mazes in order.
 
 To remove a level, delete its file in `levels/custom/` and run `python3 add_level.py --rebuild`.
 

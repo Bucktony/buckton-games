@@ -28,7 +28,7 @@ function loadLevel(lv){
   grid=g.map(r=>r.split(''));R=grid.length;C=grid[0].length;stars=[];
   for(let r=0;r<R;r++)for(let c=0;c<C;c++){const ch=grid[r][c];if(ch==='S'){F.r=r;F.c=c;F.x=c;F.y=r}if(ch==='E'){hole.r=r;hole.c=c}if(ch==='*')stars.push({r,c,got:false,ph:Math.random()*6})}
   F.path=[];F.bump=0;F.cheek=0;F.dir=1;hole.size=1;hole.bites=0;levelStars=0;state='play';parts=[];target=null;
-  $('lvl').textContent=playlist.length>1?`Level ${li+1}`:lv.name;updHud();layout();
+  $("lvl").textContent=playlist===BUILTIN?`Level ${li+1}`:lv.name;updHud();layout();
 }
 const open=(r,c)=>r>=0&&c>=0&&r<R&&c<C&&grid[r][c]!=='#';
 // ---------- state ----------
@@ -150,7 +150,7 @@ function arrive(){const s=stars.find(s=>!s.got&&s.r===F.r&&s.c===F.c);if(s){s.go
   if(F.r===hole.r&&F.c===hole.c){state='nom';tState=performance.now()/1000;target=null;keyDir=null;SND.giggle()}}
 // ---------- screens ----------
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));$('hud').classList.toggle('on',!id)}
-function showYummy(){SND.yay();$('yumStars').textContent=`⭐ ${levelStars} star${levelStars===1?'':'s'}!`;$('nextBtn').textContent=li+1<playlist.length?'Next ▶':'⭐ Finish';show('yummy')}
+function showYummy(){SND.yay();$('yumStars').textContent=levelStars?`⭐ ${levelStars} star${levelStars===1?'':'s'}!`:'🌟 Great job!';$('nextBtn').textContent=li+1<playlist.length?'Next ▶':'⭐ Finish';show('yummy')}
 function startPlaylist(list){playlist=list;li=0;totalStars=0;show(null);loadLevel(playlist[0])}
 $('playBtn').onclick=()=>{ac();saveName();startPlaylist(BUILTIN)};
 $('nextBtn').onclick=()=>{li++;if(li<playlist.length){show(null);loadLevel(playlist[li])}else{state='done';SND.yay();$('doneTitle').textContent=`You did it, ${fairyName}!`;$('doneStars').textContent=`⭐ ${totalStars} stars collected!`;drawPrev($('donePrev'));show('done')}};
@@ -161,7 +161,7 @@ $('mazesBack').onclick=()=>show('start');
 function buildMazes(){const L=$('mazeList');L.innerHTML='';if(!CUSTOM.length){L.innerHTML='<div class="big">No mazes yet! Draw one on paper ✏️</div>';return}
   CUSTOM.forEach((lv,i)=>{const d=document.createElement('div');d.className='mz';const c=document.createElement('canvas');const g=lv.grid,rr_=g.length,cc=Math.max(...g.map(r=>r.length)),s=Math.floor(240/Math.max(rr_,cc));c.width=cc*s;c.height=rr_*s;const x=c.getContext('2d');
     g.forEach((row,r)=>[...row].forEach((ch,k)=>{x.fillStyle=ch==='#'?'#7a55d6':ch==='S'?'#ff6ec7':ch==='E'?'#c77dff':ch==='*'?'#ffe033':'#2a1660';x.fillRect(k*s,r*s,s,s)}));
-    d.appendChild(c);d.appendChild(document.createTextNode(lv.name));d.onclick=()=>startPlaylist([lv]);L.appendChild(d)})}
+    d.appendChild(c);d.appendChild(document.createTextNode(lv.name));d.onclick=()=>startPlaylist(CUSTOM.slice(i));L.appendChild(d)})}
 // start screen controls
 const nameEl=$('name');nameEl.value=fairyName;function saveName(){fairyName=(nameEl.value.trim()||'Floaty').slice(0,14);store.set('name',fairyName)}
 nameEl.addEventListener('change',saveName);nameEl.addEventListener('keydown',e=>{if(e.key==='Enter'){nameEl.blur();saveName()}});
