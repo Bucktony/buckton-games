@@ -69,6 +69,8 @@ button.hero2{font-size:clamp(28px,5.4vw,46px)}
 @media (max-width:560px){#whud{gap:3px;padding-left:4px;padding-right:4px}#whud .pill{font-size:15px;padding:4px 7px}#whud button{font-size:22px;min-height:46px;min-width:46px;padding:0 .3em}}
 #gatePop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,4,30,.55);z-index:10}
 #gatePop.on{display:flex}
+#tpSkip{position:fixed;right:10px;bottom:10px;display:none;z-index:6;font-size:20px;min-height:44px;min-width:44px;padding:0;opacity:.35;background:rgba(0,0,0,.25)}#tpSkip.on{display:block}
+#whud .pill small.tp{font-size:.6em;opacity:.8;margin-left:6px}
 .gp{background:linear-gradient(#5b3aa8,#3a1f7a);border:6px solid #ffe066;border-radius:36px;padding:24px 28px;text-align:center;max-width:92vw;box-shadow:0 0 40px rgba(255,224,102,.5);animation:popin .25s}
 @keyframes popin{from{transform:scale(.6);opacity:0}}
 .gpIcon{font-size:72px;line-height:1.1}.gpText{font-size:clamp(30px,7vw,56px);font-weight:bold;margin:8px 0 18px;color:#fff6c8}
@@ -109,6 +111,7 @@ small{opacity:.75;font-size:clamp(14px,2.6vw,20px)}
 </div>
 <div class="screen" id="worlds"><h2>🌌 Star Gate World</h2><div class="slots" id="slots"></div><button class="alt" id="worldsBack">⬅ Back</button></div>
 <div id="whud"><button id="wHome" aria-label="Home">🏠</button><div class="pill" id="wZone">Zone 1</div><div class="pill" id="wStars" title="stars to spend">⭐ 0</div><div class="pill" id="wTotal" title="stars collected">🌟 0</div><div class="pill" id="wHoles" title="black holes eaten">🍩 0</div><div class="pill" id="wTea" title="fairies at the tea party">🧚 0</div></div>
+<button id="tpSkip" aria-label="Skip">⏭</button>
 <div id="gatePop"><div class="gp"><div class="gpIcon" id="gpIcon">🚪</div><div class="gpText" id="gpText"></div><div class="row" id="gpBtns"></div></div></div>
 <div class="screen" id="mazes"><h2>🧩 Bonus Mazes</h2><div class="mazes" id="mazeList"></div><button class="alt" id="mazesBack">⬅ Back</button></div>
 
