@@ -35,6 +35,20 @@ input#name{font:inherit;font-size:clamp(28px,6vw,48px);text-align:center;border-
 #hud .pill{background:rgba(255,255,255,.18);border-radius:999px;padding:6px 18px;font-size:clamp(20px,4vw,34px);font-weight:bold}
 #hud button{pointer-events:auto;font-size:28px;min-height:60px;min-width:60px;padding:0 .6em;background:rgba(255,255,255,.25)}
 .mazes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px;width:min(94vw,900px);align-items:start}
+.dress{background:linear-gradient(#ffd166,#f08a24)}
+#dressup{justify-content:flex-start}
+.du{display:flex;gap:3vw;align-items:flex-start;justify-content:center;width:100%;max-width:1100px}
+.duPrev{display:flex;flex-direction:column;align-items:center;gap:12px;position:sticky;top:0}
+#duCanvas{position:static;width:min(38vw,380px);height:min(38vw,380px);background:radial-gradient(circle,#4b2a8a 0,#2a1460 65%,transparent 70%);border-radius:50%}
+.duParts{display:flex;flex-direction:column;gap:12px;flex:1;max-width:620px}
+.part{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.1);border-radius:22px;padding:8px 12px}
+.part .lab{display:flex;flex-direction:column;align-items:center;min-width:76px;font-weight:bold;font-size:clamp(18px,3.4vw,24px)}
+.part .lab span{font-size:clamp(30px,6vw,40px);line-height:1.1}
+.part .sws{display:flex;flex-wrap:wrap;gap:10px}
+.part .sws div{width:clamp(44px,8.5vw,58px);height:clamp(44px,8.5vw,58px);border-radius:50%;border:5px solid rgba(255,255,255,.35);cursor:pointer;touch-action:manipulation}
+.part .sws div.sel{border-color:#fff;box-shadow:0 0 0 4px #ffe066,0 0 16px #fff;transform:scale(1.08)}
+button.small{font-size:clamp(18px,3.6vw,28px)}
+@media (orientation:portrait){.du{flex-direction:column;align-items:center}.duPrev{position:sticky;top:-3vh;z-index:2;background:#140834;border-radius:0 0 30px 30px;padding:6px 10px 10px;width:100%}#duCanvas{width:min(46vw,260px);height:min(46vw,260px)}.duParts{width:100%}}
 .mzh{grid-column:1/-1;font-size:clamp(24px,4.5vw,36px);font-weight:bold;color:#fff2a8;text-align:left;margin-top:8px}
 .mz{background:rgba(255,255,255,.12);border-radius:22px;padding:12px;cursor:pointer;font-size:22px;font-weight:bold}
 .mz canvas{position:static;width:100%;height:auto;border-radius:12px;background:#1d0f4a}
@@ -48,14 +62,21 @@ small{opacity:.75;font-size:clamp(14px,2.6vw,20px)}
   <h1>Fairy Maze</h1>
   <canvas id="preview" width="300" height="300"></canvas>
   <input id="name" maxlength="14" aria-label="Fairy name" autocomplete="off">
-  <div class="sw" id="swatches"></div>
   <div class="row">
     <button class="play" id="playBtn">▶ Play</button>
     <button class="alt" id="mazesBtn">🗺️ Our Mazes</button>
+    <button class="dress" id="dressBtn">👗 Dress Up</button>
   </div>
   <div class="row"><button class="rec" id="recBtn">🎤 Record your NOM NOM!</button><button class="rec" id="recPlay" style="display:none">🔊</button><button class="rec" id="recDel" style="display:none">✖</button></div>
 </div>
 
+<div class="screen" id="dressup">
+  <div class="du">
+    <div class="duPrev"><canvas id="duCanvas" width="420" height="420"></canvas>
+      <div class="row"><button class="alt small" id="duReset">↺ Reset to Floaty</button><button class="play" id="duDone">✔ Done</button></div></div>
+    <div class="duParts" id="duParts"></div>
+  </div>
+</div>
 <div class="screen" id="mazes"><h2>Our Mazes</h2><div class="mazes" id="mazeList"></div><button class="alt" id="mazesBack">⬅ Back</button></div>
 
 <div class="screen" id="yummy"><h2 style="font-size:clamp(56px,13vw,130px)">Yummy!</h2><div class="big" id="yumStars"></div><button class="play" id="nextBtn">Next ▶</button></div>
