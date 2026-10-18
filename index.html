@@ -61,6 +61,7 @@ button.small{font-size:clamp(18px,3.6vw,28px)}
 #whud .pill{background:rgba(20,8,52,.55);border-radius:999px;padding:5px 12px;font-size:clamp(17px,3.6vw,30px);font-weight:bold;white-space:nowrap;transition:transform .15s}
 #whud .pill.pop{transform:scale(1.25)}
 #whud button{pointer-events:auto;font-size:26px;min-height:56px;min-width:56px;padding:0 .5em;background:rgba(255,255,255,.25)}
+@media (max-width:560px){#whud{gap:3px;padding-left:4px;padding-right:4px}#whud .pill{font-size:15px;padding:4px 7px}#whud button{font-size:22px;min-height:46px;min-width:46px;padding:0 .3em}}
 #gatePop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,4,30,.55);z-index:10}
 #gatePop.on{display:flex}
 .gp{background:linear-gradient(#5b3aa8,#3a1f7a);border:6px solid #ffe066;border-radius:36px;padding:24px 28px;text-align:center;max-width:92vw;box-shadow:0 0 40px rgba(255,224,102,.5);animation:popin .25s}
@@ -98,7 +99,7 @@ small{opacity:.75;font-size:clamp(14px,2.6vw,20px)}
   </div>
 </div>
 <div class="screen" id="worlds"><h2>🌌 Star Gate World</h2><div class="slots" id="slots"></div><button class="alt" id="worldsBack">⬅ Back</button></div>
-<div id="whud"><button id="wHome" aria-label="Home">🏠</button><div class="pill" id="wZone">Zone 1</div><div class="pill" id="wStars" title="stars to spend">⭐ 0</div><div class="pill" id="wTotal" title="stars collected">🌟 0</div><div class="pill" id="wHoles" title="black holes eaten">🍩 0</div></div>
+<div id="whud"><button id="wHome" aria-label="Home">🏠</button><div class="pill" id="wZone">Zone 1</div><div class="pill" id="wStars" title="stars to spend">⭐ 0</div><div class="pill" id="wTotal" title="stars collected">🌟 0</div><div class="pill" id="wHoles" title="black holes eaten">🍩 0</div><div class="pill" id="wTea" title="fairies at the tea party">🧚 0</div></div>
 <div id="gatePop"><div class="gp"><div class="gpIcon" id="gpIcon">🚪</div><div class="gpText" id="gpText"></div><div class="row" id="gpBtns"></div></div></div>
 <div class="screen" id="mazes"><h2>Our Mazes</h2><div class="mazes" id="mazeList"></div><button class="alt" id="mazesBack">⬅ Back</button></div>
 
