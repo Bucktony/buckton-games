@@ -163,7 +163,7 @@ function frameDraw(t,dt){const ox=OX(),oy=OY(),R=roomOf(F.r,F.c),th=THEMES[zoneO
   for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=.06;p.life-=dt*.9;if(p.life>0){ctx.globalAlpha=Math.max(0,p.life);Core.star5(p.x,p.y,p.s,p.c,ctx)}}ctx.globalAlpha=1;parts=parts.filter(p=>p.life>0);
   // fairy
   const bb=F.bump>0?Math.sin(F.bump*Math.PI)*.18:0;F.bump=Math.max(0,F.bump-dt*4);
-  drawFollowers(ox,oy,t);
+  drawFloatyRing(ox,oy,t);drawFollowers(ox,oy,t);
   Core.drawFairy(ctx,ox+(F.x+.5+F.bx*bb)*cell,oy+(F.y+.45+F.by*bb)*cell+Math.sin(t*4)*cell*.05,cell/80,t,F.dir,F.cheek);
   // flying stars to the gate
   for(const f of flyers){const u=(t-f.t0)/.7;if(u<0)continue;const e=u<1?u*u*(3-2*u):1;const x=f.x0+(f.gx-f.x0)*e,y=f.y0+(f.gy-f.y0)*e-Math.sin(e*Math.PI)*80;
@@ -184,9 +184,17 @@ function nookAt(r,c){const z=zoneAtCell(r,c);if(z<0||D.met.includes(z))return -1
 function pushTrail(){const l=trail[trail.length-1];if(!l||Math.hypot(F.x-l.x,F.y-l.y)>=.1){trail.push({x:F.x,y:F.y});if(trail.length>600)trail.splice(0,trail.length-600)}}
 // position a given distance (in cells) back along Floaty's path: smooth snake-style following
 function trailAt(dist){let acc=0,p={x:F.x,y:F.y};for(let i=trail.length-1;i>=0;i--){const q=trail[i],s=Math.hypot(p.x-q.x,p.y-q.y);if(acc+s>=dist){const u=(dist-acc)/(s||1);return{x:p.x+(q.x-p.x)*u,y:p.y+(q.y-p.y)*u,dir:q.x<p.x?1:q.x>p.x?-1:0}}acc+=s;p=q}return{x:p.x,y:p.y,dir:0}}
-const fDir=[];
-function drawFollowers(ox,oy,t){for(let i=following.length-1;i>=0;i--){const p=trailAt((i+1)*.9);if(p.dir)fDir[i]=p.dir;
-  Core.drawFairy(ctx,ox+(p.x+.5)*cell,oy+(p.y+.5)*cell+Math.sin(t*4+i*1.3)*cell*.06,cell/105,t+i*.37,fDir[i]||F.dir,0,lookOf(following[i]))}}
+// tiny companions: ~35% of Floaty's size, orbiting softly BEHIND her so Floaty is always the biggest and on top
+function orbitPos(i,t){const n=Math.max(1,following.length),a=t*1.1+i*Math.PI*2/n,bob=Math.sin(t*3+i*1.7)*.08;
+  return{x:F.x+.5+Math.cos(a)*.92,y:F.y+.4+Math.sin(a)*.58+bob,front:Math.sin(a)>0,a}}
+function drawFloatyRing(ox,oy,t){const x=ox+(F.x+.5)*cell,y=oy+(F.y+.9)*cell,p=1+.06*Math.sin(t*4);
+  const g=ctx.createRadialGradient(x,y,0,x,y,cell*.5*p);g.addColorStop(0,'rgba(255,240,150,.55)');g.addColorStop(1,'rgba(255,240,150,0)');ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(x,y,cell*.5*p,cell*.2*p,0,0,7);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.75)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y,cell*.36*p,cell*.13*p,0,0,7);ctx.stroke()}
+function drawFollowers(ox,oy,t){if(!following.length)return;
+  for(let i=0;i<following.length;i++){const p=orbitPos(i,t),x=ox+p.x*cell,y=oy+p.y*cell,L=lookOf(following[i]);
+    const g=ctx.createRadialGradient(x,y,0,x,y,cell*.24);g.addColorStop(0,L.dress+'88');g.addColorStop(1,L.dress+'00');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,cell*.24,0,7);ctx.fill();
+    if(Math.random()<.25)parts.push({x:x-Math.cos(p.a)*cell*.1,y:y+cell*.05,vx:(Math.random()-.5)*.4,vy:Math.random()*.4,life:.5,c:L.dress,s:Math.random()*1.5+1.2});
+    ctx.save();ctx.globalAlpha=.9;Core.drawFairy(ctx,x,y,cell/230,t+i*.37,-Math.sin(p.a)>0?1:-1,0,L);ctx.restore()}}
 function teaTable(x,y,s,t,cups){// tiny round table with a cloth and teacups (s = size in px)
   ctx.save();ctx.translate(x,y);ctx.fillStyle='#a0673a';ctx.fillRect(-s*.05,0,s*.1,s*.32);ctx.fillRect(-s*.2,s*.3,s*.4,s*.06);
   ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(0,0,s*.42,s*.13,0,0,7);ctx.fill();ctx.fillStyle='#ff9ad5';ctx.beginPath();ctx.ellipse(0,s*.03,s*.42,s*.1,0,0,Math.PI);ctx.fill();
@@ -202,14 +210,14 @@ function drawNooks(ox,oy,r0,r1,c0,c1,t){for(let z=0;z<=D.opened;z++){const [r,c]
     if(Math.sin(t*2+z)>.3)heart(x+cell*.3,y-cell*.55-((t*20)%10),cell*.12,'#ff6ec7')}
   teaTable(x-cell*.12,y+cell*.12,cell*.62,t,2)}}
 function drawFlyoff(t,dt){for(const f of flyoff){const u=t-f.t0;f.x+=Math.sin(u*3+f.i)*.6;f.y-=Math.max(0,u-.6)*3.2;const wav=Math.sin(u*12)*.25;
-  ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,(3.4-u)/.8));ctx.translate(f.x,f.y);ctx.rotate(wav);Core.drawFairy(ctx,0,0,cell/95,t+f.i,1,0,lookOf(f.id));ctx.restore();
+  ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,(3.4-u)/.8));ctx.translate(f.x,f.y);ctx.rotate(wav);Core.drawFairy(ctx,0,0,cell/230*(1+Math.min(1,u)*.6),t+f.i,1,0,lookOf(f.id));ctx.restore();
   if(Math.random()<.4)parts.push({x:f.x,y:f.y+cell*.3,vx:Math.random()-.5,vy:Math.random(),life:.7,c:'#fff6a8',s:3})}
   if(flyoff.length){const u=t-flyoff[0].t0;if(u<2.2){ctx.save();const fs=Math.max(22,Math.min(40,W/14));ctx.font=`bold ${fs}px "Trebuchet MS",sans-serif`;ctx.textAlign='center';ctx.lineWidth=fs*.15;ctx.strokeStyle='#fff';ctx.fillStyle='#ff4fa8';const ty=top+fs*2.2;ctx.strokeText('Bye bye! 👋',W/2,ty);ctx.fillText('Bye bye! 👋',W/2,ty);ctx.restore()}}
   flyoff=flyoff.filter(f=>t-f.t0<3.4)}
 function teaPartyTime(){mode='popup';keyDir=null;target=null;down=false;const pop=$('gatePop'),btns=$('gpBtns');btns.innerHTML='';
   $('gpIcon').textContent='🧚🫖🧚';$('gpText').innerHTML="We're going to the fairy tea party!<br>See you soon!";
   const o=document.createElement('button');o.className='yes';o.textContent='👋 Bye bye!';o.onclick=()=>{pop.classList.remove('on');waveGoodbye()};btns.append(o);pop.classList.add('on');Core.SND.flap()}
-function waveGoodbye(){const t=performance.now()/1000;following.forEach((id,i)=>{const p=trailAt((i+1)*.9);flyoff.push({id,i,t0:t,x:OX()+(p.x+.5)*cell,y:OY()+(p.y+.5)*cell})});
+function waveGoodbye(){const t=performance.now()/1000;following.forEach((id,i)=>{const p=orbitPos(i,t);flyoff.push({id,i,t0:t,x:OX()+p.x*cell,y:OY()+p.y*cell})});
   D.party.push(...following);following=[];mode='walk';popUntil=performance.now()+600;Core.SND.yay();[0,.12,.24,.36].forEach((d,i)=>tone(880*[1,1.25,1.5,2][i],d,.3,.05));hud('wTea');save()}
 // ---------- big moments: NOM, tea meet, tea party ----------
 const SCENE_LEN={nom:3.1,tea:3.4,party:3.8};
@@ -286,5 +294,5 @@ function loop(now){if(!active)return;const dt=Math.min(.05,(now-last)/1000);last
   frameDraw(t,dt);if(scene)drawScene(t,dt);if(now-saveT>1500)save(now);requestAnimationFrame(loop)}
 addEventListener('pagehide',()=>{if(active)save()});document.addEventListener('visibilitychange',()=>{if(active&&document.hidden)save()});
 // test hook
-window.__world={get bnd(){return bnd},roomOf,themeAt,get D(){return D},get F(){return F},get mode(){return mode},get active(){return active},cellAt,passable,starAt,holeAt,zoneOf,set speed(v){speed=v},get room(){return curRoom},collected:()=>collected,eaten:()=>eaten,G,get following(){return following},get scene(){return scene},get trail(){return trail},nookCell,skipScene,get flyoff(){return flyoff}};
+window.__world={get bnd(){return bnd},roomOf,themeAt,get D(){return D},get F(){return F},get mode(){return mode},get active(){return active},cellAt,passable,starAt,holeAt,zoneOf,set speed(v){speed=v},get room(){return curRoom},collected:()=>collected,eaten:()=>eaten,G,get following(){return following},get scene(){return scene},get trail(){return trail},orbitPos,screenOf:()=>({x:OX()+(F.x+.5)*cell,y:OY()+(F.y+.5)*cell,cell}),nookCell,skipScene,get flyoff(){return flyoff}};
 })();
