@@ -14,7 +14,7 @@ let following=[],trail=[],scene=null,flyoff=[];
 let collected=new Set(),eaten=new Set(),parts=[],flyers=[],banner=null,cele=null,curRoom=null,keyDir=null,target=null,down=false,lastPtr=null,lastBump=0,popBlock=false,saveT=0;
 const zoneOf=z=>{if(!zones.has(z))zones.set(z,G.zone(D.seed,z));return zones.get(z)};
 // ---------- world cells (2D) ----------
-let bnd=new Map(); // wall-line openings: gates and passages, keyed "r,c"
+let bnd=new Map(),lastDecos=[]; // wall-line openings: gates and passages, keyed "r,c"
 function rebuild(){bnd=new Map();for(let z=0;z<=D.opened;z++){const g=G.gate(D.seed,z);bnd.set(g.r+','+g.c,{type:'gate',z,r:g.r,c:g.c,side:g.side})}
   for(const p of G.passages(D.seed,D.opened))bnd.set(p.r+','+p.c,{type:'pass',r:p.r,c:p.c})}
 const zIdx=(zx,zy)=>G.zoneIndexAt(D.seed,zx,zy,D.opened+1);
@@ -134,11 +134,11 @@ function burst(x,y,n,cols,sp=4){for(let i=0;i<n;i++){const a=Math.random()*6.28,
 // ---------- drawing ----------
 function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y,w,h,r):ctx.rect(x,y,w,h);ctx.fill()}
 const hsh=(r,c)=>{let h=Math.imul(r*73856093^c*19349663,0x27d4eb2d);return((h^h>>>15)>>>0)%1000};
-function deco(type,x,y,s,t){ctx.save();ctx.globalAlpha=.55;ctx.translate(x,y);
-  if(type==='sunflower'){ctx.fillStyle='#ffd43b';for(let i=0;i<8;i++){const a=i*.785;ctx.beginPath();ctx.ellipse(Math.cos(a)*s*.22,Math.sin(a)*s*.22,s*.12,s*.07,a,0,7);ctx.fill()}ctx.fillStyle='#8a5a2b';ctx.beginPath();ctx.arc(0,0,s*.12,0,7);ctx.fill()}
+function deco(type,x,y,s,t,onWall){ctx.save();ctx.globalAlpha=onWall?.95:.55;ctx.translate(x,y);
+  if(type==='sunflower'){ctx.fillStyle='#fff06a';ctx.strokeStyle='#a8641a';ctx.lineWidth=1.2;for(let i=0;i<8;i++){const a=i*.785;ctx.beginPath();ctx.ellipse(Math.cos(a)*s*.22,Math.sin(a)*s*.22,s*.12,s*.07,a,0,7);ctx.fill();ctx.stroke()}ctx.fillStyle='#8a5a2b';ctx.beginPath();ctx.arc(0,0,s*.12,0,7);ctx.fill()}
   else if(type==='moon'){ctx.fillStyle='#fff3b0';ctx.beginPath();ctx.arc(0,0,s*.22,0,7);ctx.arc(s*.1,-s*.06,s*.2,0,7,true);ctx.fill('evenodd')}
   else if(type==='cloud'){ctx.fillStyle='#fff';[[-.14,0,.13],[0,-.06,.16],[.15,0,.12]].forEach(([a,b,r])=>{ctx.beginPath();ctx.arc(a*s,b*s,r*s,0,7);ctx.fill()});ctx.fillStyle='#ff9ad5';ctx.fillRect(-s*.25,s*.1,s*.5,s*.04)}
-  else if(type==='candy'){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,s*.05);ctx.lineTo(0,s*.35);ctx.stroke();ctx.fillStyle='#ff6fae';ctx.beginPath();ctx.arc(0,-s*.05,s*.18,0,7);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,-s*.05,s*.1,t,t+4);ctx.stroke()}
+  else if(type==='candy'){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,s*.05);ctx.lineTo(0,s*.35);ctx.stroke();ctx.fillStyle='#ff4f9a';ctx.strokeStyle='#b8256a';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,-s*.05,s*.18,0,7);ctx.fill();ctx.stroke();ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,-s*.05,s*.1,t,t+4);ctx.stroke()}
   else if(type==='shell'){ctx.fillStyle='#ffd1c2';ctx.beginPath();ctx.moveTo(0,s*.2);for(let i=0;i<=6;i++){const a=Math.PI+i*Math.PI/6;ctx.lineTo(Math.cos(a)*s*.25,Math.sin(a)*s*.25)}ctx.closePath();ctx.fill();ctx.strokeStyle='#e89a8a';ctx.lineWidth=1.5;for(let i=1;i<6;i++){const a=Math.PI+i*Math.PI/6;ctx.beginPath();ctx.moveTo(0,s*.2);ctx.lineTo(Math.cos(a)*s*.24,Math.sin(a)*s*.24);ctx.stroke()}}
   else if(type==='snow'){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.rotate(t*.3);for(let i=0;i<3;i++){ctx.rotate(Math.PI/3);ctx.beginPath();ctx.moveTo(-s*.22,0);ctx.lineTo(s*.22,0);ctx.stroke()}}
   ctx.restore()}
@@ -158,10 +158,11 @@ function frameDraw(t,dt){const ox=OX(),oy=OY(),R=roomOf(F.r,F.c),th=THEMES[zoneO
   for(let i=0;i<70;i++){ctx.fillStyle=`rgba(255,255,230,${.4+.4*Math.sin(t*2+i)})`;ctx.fillRect(((i*211)%W),((i*53)%H),2,2)}
   const r0=Math.floor(-oy/cell)-1,r1=Math.ceil((H-oy)/cell)+1,c0=Math.floor(-ox/cell)-1,c1=Math.ceil((W-ox)/cell)+1;
   const decos=[];for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const ti=themeAt(r,c);if(ti<0)continue;const zt=THEMES[ti],x=ox+c*cell,y=oy+r*cell,ch=cellAt(r,c);
-    if(ch==='#'){ctx.fillStyle=zt.wall;rr(x+1,y+1,cell-2,cell-2,cell*.28);ctx.fillStyle='rgba(255,255,255,.2)';rr(x+cell*.15,y+cell*.12,cell*.7,cell*.2,cell*.1)}
-    else if(ch!=='G'){ctx.fillStyle=zt.floor;ctx.fillRect(x,y,cell,cell);if(hsh(r,c)<55&&!starAt(r,c)&&!holeAt(r,c)&&zoneAtCell(r,c)>=0&&!isNook(r,c))decos.push([zt.deco,x,y])}}
-  // decorations last, each clipped inside its own floor tile: never on walls, never erased by neighbours
-  for(const [ty,x,y] of decos){ctx.save();ctx.beginPath();ctx.rect(x+2,y+2,cell-4,cell-4);ctx.clip();deco(ty,x+cell/2,y+cell/2,cell,t);ctx.restore()}
+    if(ch==='#'){ctx.fillStyle=zt.wall;rr(x+1,y+1,cell-2,cell-2,cell*.28);ctx.fillStyle='rgba(255,255,255,.2)';rr(x+cell*.15,y+cell*.12,cell*.7,cell*.2,cell*.1);if(hsh(r,c)<170&&zoneAtCell(r,c)>=0)decos.push([zt.deco,x,y,r,c])}
+    else if(ch!=='G'){ctx.fillStyle=zt.floor;ctx.fillRect(x,y,cell,cell);}}
+  // decorations sit ON the raised wall blocks (zone borders skipped); the path keeps only stars, black holes, gates and nooks
+  lastDecos=decos.map(d=>[d[3],d[4]]);
+  for(const [ty,x,y] of decos){ctx.save();ctx.beginPath();ctx.rect(x+2,y+2,cell-4,cell-4);ctx.clip();ctx.shadowColor='rgba(40,10,60,.45)';ctx.shadowBlur=3;ctx.shadowOffsetY=1;deco(ty,x+cell/2,y+cell/2+cell*.03,cell*.9,t,true);ctx.restore()}
   // gates: closed frontier gate + opened arches
   for(const b of bnd.values()){if(b.type!=='gate'||b.r<r0||b.r>r1||b.c<c0||b.c>c1)continue;drawGate(ox+b.c*cell,oy+b.r*cell,b.z,t,b.z<D.opened)}
   // stars & holes in visible unlocked zones
@@ -385,5 +386,5 @@ function loop(now){if(!active)return;const dt=Math.min(.05,(now-last)/1000);last
   frameDraw(t,dt);if(scene)drawScene(t,dt);if(TP)drawTeaParty(t,dt);if(now-saveT>1500)save(now);requestAnimationFrame(loop)}
 addEventListener('pagehide',()=>{if(active)save()});document.addEventListener('visibilitychange',()=>{if(active&&document.hidden)save()});
 // test hook
-window.__world={get bnd(){return bnd},roomOf,themeAt,get D(){return D},get F(){return F},get mode(){return mode},get active(){return active},cellAt,passable,starAt,holeAt,zoneOf,set speed(v){speed=v},MV,get room(){return curRoom},collected:()=>collected,eaten:()=>eaten,G,get following(){return following},get scene(){return scene},get TP(){return TP},tpLayout:()=>TP&&tpLayout(),tpClick:(x,y)=>tpClick(x,y),get said(){return said},get trail(){return trail},orbitPos,screenOf:()=>({x:OX()+(F.x+.5)*cell,y:OY()+(F.y+.5)*cell,cell}),nookCell,skipScene,get flyoff(){return flyoff}};
+window.__world={get bnd(){return bnd},roomOf,themeAt,get D(){return D},get F(){return F},get mode(){return mode},get active(){return active},cellAt,passable,starAt,holeAt,zoneOf,set speed(v){speed=v},MV,get room(){return curRoom},collected:()=>collected,eaten:()=>eaten,G,get following(){return following},get scene(){return scene},get decos(){return lastDecos},get TP(){return TP},tpLayout:()=>TP&&tpLayout(),tpClick:(x,y)=>tpClick(x,y),get said(){return said},get trail(){return trail},orbitPos,screenOf:()=>({x:OX()+(F.x+.5)*cell,y:OY()+(F.y+.5)*cell,cell}),nookCell,skipScene,get flyoff(){return flyoff}};
 })();
