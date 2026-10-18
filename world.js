@@ -65,16 +65,23 @@ function slotsScreen(){Core.setState('worlds');Core.show('worlds');const S=$('sl
         el.querySelector('.yes').onclick=()=>{newWorld(i);slotsScreen()};el.querySelector('.no').onclick=()=>slotsScreen()}}
     S.appendChild(el)}}
 $('worldBtn').onclick=()=>{Core.ac();Core.saveName();slotsScreen()};
-$('worldsBack').onclick=()=>{Core.setState('menu');Core.show('start')};
+// big ▶ Play: continue the last-played world in one click (or the most recent save; or start a fresh world in slot 1)
+function lastSlot(){const l=parseInt(localStorage.getItem('fm_world_last'),10);if(l>=0&&l<SLOTS&&load(l))return l;
+  let best=-1,bt=-1;for(let i=0;i<SLOTS;i++){const d=load(i);if(d&&(d.updated||0)>=bt){bt=d.updated||0;best=i}}return best}
+window.__worldPlay=()=>{const i=lastSlot();if(i>=0)start(i);else{newWorld(0);start(0)}};
+function contHint(){const e=$('contHint');if(!e)return;const i=lastSlot();if(i<0){e.textContent='';return}const d=migrate(load(i));if(!d){e.textContent='';return}
+  try{const th=THEMES[G.zone(d.seed,d.opened).theme];e.textContent=`${th.emoji} Zone ${d.opened+1} · ⭐ ${d.stars} · 🍩 ${d.holes} · 🧚 ${(d.party||[]).length}`}catch(_){e.textContent=''}}
+contHint();
+$('worldsBack').onclick=()=>{Core.setState('menu');Core.show('start');contHint()};
 $('wHome').onclick=()=>stop();
 // ---------- start / stop ----------
-function start(i){slot=i;D=migrate(load(i))||newWorld(i);store(i,D);zones=new Map();collected=new Set(D.collected);eaten=new Set(D.eaten);following=D.following.slice();flyoff=[];scene=null;
+function start(i){slot=i;try{localStorage.setItem('fm_world_last',String(i))}catch(e){}D=migrate(load(i))||newWorld(i);store(i,D);zones=new Map();collected=new Set(D.collected);eaten=new Set(D.eaten);following=D.following.slice();flyoff=[];scene=null;
   for(let z=0;z<=D.opened;z++)zoneOf(z);rebuild();
   F={r:D.pos[0],c:D.pos[1],x:D.pos[1],y:D.pos[0],seg:null,path:[],dir:1,bump:0,bx:0,by:0,cheek:0};
   if(!passable(F.r,F.c)){const Z=zoneOf(D.opened);F.r=F.y=Z.entry[0]+Z.r0;F.c=F.x=Z.entry[1]+Z.c0}
   trail=[{x:F.x,y:F.y}];parts=[];flyers=[];cele=null;mode='walk';keyDir=null;Core.mvReset(MV);target=null;curRoom=null;camRoom=null;popBlock=false;
   Core.setState('world');Core.show('__world');$('whud').classList.add('on');active=true;layout();roomCheck(true);snap();hud();last=performance.now();requestAnimationFrame(loop)}
-function stop(){save();active=false;$('whud').classList.remove('on');$('gatePop').classList.remove('on');Core.setState('menu');Core.show('start')}
+function stop(){save();active=false;$('whud').classList.remove('on');$('gatePop').classList.remove('on');Core.setState('menu');Core.show('start');contHint()}
 // ---------- layout & camera ----------
 function layout(){dpr=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
   top=Math.min(76,H*.1);cell=Math.round(Math.max(32,Math.min(48,Math.floor(Math.min((W-8)/RW,(H-top-8)/RH)))))}

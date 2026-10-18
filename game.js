@@ -222,14 +222,20 @@ function arrive(){const s=stars.find(s=>!s.got&&s.r===F.r&&s.c===F.c);if(s){s.go
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));$('hud').classList.toggle('on',!id)}
 function showYummy(){SND.yay();$('yumStars').textContent=levelStars?`⭐ ${levelStars} star${levelStars===1?'':'s'}!`:'🌟 Great job!';$('nextBtn').textContent=li+1<playlist.length?'Next ▶':'⭐ Finish';show('yummy')}
 function startPlaylist(list){playlist=list;li=0;totalStars=0;show(null);loadLevel(playlist[0])}
-$('playBtn').onclick=()=>{ac();saveName();startPlaylist(BUILTIN)};
+$('playBtn').onclick=()=>{ac();saveName();if(window.__worldPlay)window.__worldPlay();else startPlaylist(BUILTIN)};  // Star Gate World is the main game
 $('nextBtn').onclick=()=>{li++;if(li<playlist.length){show(null);loadLevel(playlist[li])}else{state='done';SND.yay();$('doneTitle').textContent=`You did it, ${fairyName}!`;$('doneStars').textContent=`⭐ ${totalStars} stars collected!`;drawPrev($('donePrev'));show('done')}};
 $('againBtn').onclick=()=>{state='menu';drawPrev($('preview'));show('start')};
 $('homeBtn').onclick=()=>{state='menu';grid=null;show('start')};
-$('mazesBtn').onclick=()=>{ac();saveName();buildMazes();show('mazes')};
+$('mazesBtn').onclick=()=>{ac();saveName();buildMazes();show('mazes');$('mazes').scrollTop=0};
+$('drawBtn').onclick=()=>{ac();saveName();buildMazes();show('mazes');const t=document.querySelector('#mazeList .mzDraw');if(t)t.scrollIntoView({block:'start'})};
 $('mazesBack').onclick=()=>show('start');
-function buildMazes(){const L=$('mazeList');L.innerHTML='';if(!CUSTOM.length){L.innerHTML='<div class="big">No mazes yet! Draw one on paper ✏️</div>';return}
-  let pg=null;const anyGroup=CUSTOM.some(l=>l.group);CUSTOM.forEach((lv,i)=>{const grp=lv.group||'✏️ Our Drawings';if(anyGroup&&grp!==pg){pg=grp;const h=document.createElement('div');h.className='mzh';h.textContent=grp==='More Mazes'?'✨ More Mazes':grp==='Giant Adventures'?'🌌 Giant Adventures':grp;L.appendChild(h)}const d=document.createElement('div');d.className='mz';const c=document.createElement('canvas');const g=lv.grid,rr_=g.length,cc=Math.max(...g.map(r=>r.length)),s=Math.floor(240/Math.max(rr_,cc));c.width=cc*s;c.height=rr_*s;const x=c.getContext('2d');
+function buildMazes(){const L=$('mazeList');L.innerHTML='';
+  // the original 5 levels live here now, as a bonus
+  {const h=document.createElement('div');h.className='mzh';h.textContent='⭐ Fairy Maze Levels';L.appendChild(h);const d=document.createElement('div');d.className='mz mzb';const c=document.createElement('canvas');c.width=c.height=120;const x=c.getContext('2d');
+   const g0=BUILTIN[0].grid||BUILTIN[0],rows=Array.isArray(g0)?g0:String(g0).split('\n'),s=Math.floor(120/Math.max(rows.length,rows[0].length));rows.forEach((row,r)=>[...row].forEach((ch,k)=>{x.fillStyle=ch==='#'?'#7a55d6':ch==='S'?'#ff6ec7':ch==='E'?'#c77dff':ch==='*'?'#ffe033':'#2a1660';x.fillRect(k*s,r*s,s,s)}));
+   d.appendChild(c);d.appendChild(document.createTextNode(`Levels 1-${BUILTIN.length}`));d.onclick=()=>startPlaylist(BUILTIN);L.appendChild(d)}
+  if(!CUSTOM.length){L.insertAdjacentHTML('beforeend','<div class="big mzDraw">No mazes yet! Draw one on paper ✏️</div>');return}
+  let pg=null;const anyGroup=CUSTOM.some(l=>l.group);CUSTOM.forEach((lv,i)=>{const grp=lv.group||'✏️ Our Drawings';if(anyGroup&&grp!==pg){pg=grp;const h=document.createElement('div');h.className='mzh'+(grp==='✏️ Our Drawings'?' mzDraw':'');h.textContent=grp==='More Mazes'?'✨ More Mazes':grp==='Giant Adventures'?'🌌 Giant Adventures':grp;L.appendChild(h);if(grp==='✏️ Our Drawings')L.insertAdjacentHTML('beforeend','<div class="mzTip">✏️ Draw a maze on paper 📄 → 📸 → 🧚 it becomes a level!</div>')}const d=document.createElement('div');d.className='mz';const c=document.createElement('canvas');const g=lv.grid,rr_=g.length,cc=Math.max(...g.map(r=>r.length)),s=Math.floor(240/Math.max(rr_,cc));c.width=cc*s;c.height=rr_*s;const x=c.getContext('2d');
     g.forEach((row,r)=>[...row].forEach((ch,k)=>{const ac_=(lv.areas||[]).find(a=>r>=a.r0&&r<=a.r1&&k>=a.c0&&k<=a.c1);x.fillStyle=ch==='#'?(ac_?ac_.color:'#7a55d6'):ch==='S'?'#ff6ec7':ch==='E'?'#c77dff':ch==='*'?'#ffe033':'#2a1660';x.fillRect(k*s,r*s,s,s)}));
     d.appendChild(c);d.appendChild(document.createTextNode(lv.name));d.onclick=()=>startPlaylist(CUSTOM.slice(i));L.appendChild(d)})}
 // start screen controls

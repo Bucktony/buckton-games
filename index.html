@@ -48,6 +48,11 @@ input#name{font:inherit;font-size:clamp(28px,6vw,48px);text-align:center;border-
 .part .sws div{width:clamp(44px,8.5vw,58px);height:clamp(44px,8.5vw,58px);border-radius:50%;border:5px solid rgba(255,255,255,.35);cursor:pointer;touch-action:manipulation}
 .part .sws div.sel{border-color:#fff;box-shadow:0 0 0 4px #ffe066,0 0 16px #fff;transform:scale(1.08)}
 button.small{font-size:clamp(18px,3.6vw,28px)}
+button.hero{font-size:clamp(40px,8vw,72px);padding:.3em 1.1em;box-shadow:0 0 30px rgba(255,122,217,.6),0 6px 0 rgba(0,0,0,.25)}
+button.hero2{font-size:clamp(28px,5.4vw,46px)}
+.contHint{font-size:clamp(18px,3.6vw,28px);color:#fff6c8;min-height:1.2em;font-weight:bold}
+.row.bonus{opacity:.92}.row.bonus button{padding:.35em .8em}
+.mzTip{grid-column:1/-1;font-size:clamp(18px,3.6vw,26px);color:#fff6c8;background:rgba(255,255,255,.1);border-radius:20px;padding:10px 16px;text-align:center}
 @media (orientation:portrait){.du{flex-direction:column;align-items:center}.duPrev{position:sticky;top:-3vh;z-index:2;background:#140834;border-radius:0 0 30px 30px;padding:6px 10px 10px;width:100%}#duCanvas{width:min(46vw,260px);height:min(46vw,260px)}.duParts{width:100%}}
 .world{background:linear-gradient(#8f7bff,#5a3fd6)}
 #worlds{justify-content:flex-start}
@@ -83,10 +88,14 @@ small{opacity:.75;font-size:clamp(14px,2.6vw,20px)}
   <canvas id="preview" width="300" height="300"></canvas>
   <input id="name" maxlength="14" aria-label="Fairy name" autocomplete="off">
   <div class="row">
-    <button class="play" id="playBtn">▶ Play</button>
-    <button class="alt" id="mazesBtn">🗺️ Our Mazes</button>
-    <button class="dress" id="dressBtn">👗 Dress Up</button>
-    <button class="world" id="worldBtn">🌌 Star Gate World</button>
+    <button class="play hero" id="playBtn">▶ Play</button>
+    <button class="dress hero2" id="dressBtn">👗 Dress Up</button>
+  </div>
+  <div class="contHint" id="contHint"></div>
+  <div class="row bonus">
+    <button class="world small" id="worldBtn">🌌 My Worlds</button>
+    <button class="alt small" id="mazesBtn">🧩 Bonus Mazes</button>
+    <button class="alt small" id="drawBtn">✏️ Draw-a-Maze</button>
   </div>
   <div class="row"><button class="rec" id="recBtn">🎤 Record your NOM NOM!</button><button class="rec" id="recPlay" style="display:none">🔊</button><button class="rec" id="recDel" style="display:none">✖</button></div>
 </div>
@@ -101,7 +110,7 @@ small{opacity:.75;font-size:clamp(14px,2.6vw,20px)}
 <div class="screen" id="worlds"><h2>🌌 Star Gate World</h2><div class="slots" id="slots"></div><button class="alt" id="worldsBack">⬅ Back</button></div>
 <div id="whud"><button id="wHome" aria-label="Home">🏠</button><div class="pill" id="wZone">Zone 1</div><div class="pill" id="wStars" title="stars to spend">⭐ 0</div><div class="pill" id="wTotal" title="stars collected">🌟 0</div><div class="pill" id="wHoles" title="black holes eaten">🍩 0</div><div class="pill" id="wTea" title="fairies at the tea party">🧚 0</div></div>
 <div id="gatePop"><div class="gp"><div class="gpIcon" id="gpIcon">🚪</div><div class="gpText" id="gpText"></div><div class="row" id="gpBtns"></div></div></div>
-<div class="screen" id="mazes"><h2>Our Mazes</h2><div class="mazes" id="mazeList"></div><button class="alt" id="mazesBack">⬅ Back</button></div>
+<div class="screen" id="mazes"><h2>🧩 Bonus Mazes</h2><div class="mazes" id="mazeList"></div><button class="alt" id="mazesBack">⬅ Back</button></div>
 
 <div class="screen" id="yummy"><h2 style="font-size:clamp(56px,13vw,130px)">Yummy!</h2><div class="big" id="yumStars"></div><button class="play" id="nextBtn">Next ▶</button></div>
 
