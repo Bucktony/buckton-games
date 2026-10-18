@@ -49,6 +49,25 @@ input#name{font:inherit;font-size:clamp(28px,6vw,48px);text-align:center;border-
 .part .sws div.sel{border-color:#fff;box-shadow:0 0 0 4px #ffe066,0 0 16px #fff;transform:scale(1.08)}
 button.small{font-size:clamp(18px,3.6vw,28px)}
 @media (orientation:portrait){.du{flex-direction:column;align-items:center}.duPrev{position:sticky;top:-3vh;z-index:2;background:#140834;border-radius:0 0 30px 30px;padding:6px 10px 10px;width:100%}#duCanvas{width:min(46vw,260px);height:min(46vw,260px)}.duParts{width:100%}}
+.world{background:linear-gradient(#8f7bff,#5a3fd6)}
+#worlds{justify-content:flex-start}
+.slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(86vw,260px),1fr));gap:18px;width:min(94vw,960px)}
+.slot{background:rgba(255,255,255,.12);border-radius:28px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:250px;justify-content:center}
+.slot .se{font-size:64px;line-height:1}.slot .sn{font-size:26px;font-weight:bold;color:#fff2a8}.slot .sc{font-size:24px;font-weight:bold;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.slot .st{font-size:18px;opacity:.85}
+.slot button{font-size:clamp(22px,4vw,32px)}.slot button.mini{font-size:18px;min-height:52px;padding:.3em .9em;background:rgba(255,255,255,.2)}
+#whud{position:fixed;top:0;left:0;right:0;display:none;justify-content:space-between;align-items:center;gap:6px;padding:max(8px,env(safe-area-inset-top)) 8px 6px;pointer-events:none;z-index:5}
+#whud.on{display:flex}
+#whud .pill{background:rgba(20,8,52,.55);border-radius:999px;padding:5px 12px;font-size:clamp(17px,3.6vw,30px);font-weight:bold;white-space:nowrap;transition:transform .15s}
+#whud .pill.pop{transform:scale(1.25)}
+#whud button{pointer-events:auto;font-size:26px;min-height:56px;min-width:56px;padding:0 .5em;background:rgba(255,255,255,.25)}
+#gatePop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,4,30,.55);z-index:10}
+#gatePop.on{display:flex}
+.gp{background:linear-gradient(#5b3aa8,#3a1f7a);border:6px solid #ffe066;border-radius:36px;padding:24px 28px;text-align:center;max-width:92vw;box-shadow:0 0 40px rgba(255,224,102,.5);animation:popin .25s}
+@keyframes popin{from{transform:scale(.6);opacity:0}}
+.gpIcon{font-size:72px;line-height:1.1}.gpText{font-size:clamp(30px,7vw,56px);font-weight:bold;margin:8px 0 18px;color:#fff6c8}
+.gp button{font-size:clamp(26px,6vw,44px)}
+.yes{background:linear-gradient(#5ee08a,#22a85a)}.no{background:linear-gradient(#9aa4c8,#6b7499)}
 .mzh{grid-column:1/-1;font-size:clamp(24px,4.5vw,36px);font-weight:bold;color:#fff2a8;text-align:left;margin-top:8px}
 .mz{background:rgba(255,255,255,.12);border-radius:22px;padding:12px;cursor:pointer;font-size:22px;font-weight:bold}
 .mz canvas{position:static;width:100%;height:auto;border-radius:12px;background:#1d0f4a}
@@ -66,6 +85,7 @@ small{opacity:.75;font-size:clamp(14px,2.6vw,20px)}
     <button class="play" id="playBtn">▶ Play</button>
     <button class="alt" id="mazesBtn">🗺️ Our Mazes</button>
     <button class="dress" id="dressBtn">👗 Dress Up</button>
+    <button class="world" id="worldBtn">🌌 Star Gate World</button>
   </div>
   <div class="row"><button class="rec" id="recBtn">🎤 Record your NOM NOM!</button><button class="rec" id="recPlay" style="display:none">🔊</button><button class="rec" id="recDel" style="display:none">✖</button></div>
 </div>
@@ -77,6 +97,9 @@ small{opacity:.75;font-size:clamp(14px,2.6vw,20px)}
     <div class="duParts" id="duParts"></div>
   </div>
 </div>
+<div class="screen" id="worlds"><h2>🌌 Star Gate World</h2><div class="slots" id="slots"></div><button class="alt" id="worldsBack">⬅ Back</button></div>
+<div id="whud"><button id="wHome" aria-label="Home">🏠</button><div class="pill" id="wZone">Zone 1</div><div class="pill" id="wStars" title="stars to spend">⭐ 0</div><div class="pill" id="wTotal" title="stars collected">🌟 0</div><div class="pill" id="wHoles" title="black holes eaten">🍩 0</div></div>
+<div id="gatePop"><div class="gp"><div class="gpIcon" id="gpIcon">🚪</div><div class="gpText" id="gpText"></div><div class="row" id="gpBtns"></div></div></div>
 <div class="screen" id="mazes"><h2>Our Mazes</h2><div class="mazes" id="mazeList"></div><button class="alt" id="mazesBack">⬅ Back</button></div>
 
 <div class="screen" id="yummy"><h2 style="font-size:clamp(56px,13vw,130px)">Yummy!</h2><div class="big" id="yumStars"></div><button class="play" id="nextBtn">Next ▶</button></div>
@@ -86,4 +109,6 @@ small{opacity:.75;font-size:clamp(14px,2.6vw,20px)}
 <script src="levels/builtin.js"></script>
 <script src="levels/custom.js"></script>
 <script src="game.js"></script>
+<script src="worldgen.js"></script>
+<script src="world.js"></script>
 </body></html>

@@ -152,6 +152,7 @@ function bigText(txt,x,y,size,col,t){ctx.save();ctx.translate(x,y);ctx.rotate(Ma
 // ---------- loop ----------
 let last=performance.now(),flapT=0;
 function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;F.t=t;
+  if(state==='world'){requestAnimationFrame(frame);return}
   if(state==='play'||state==='nom'){
     drawBg(t);drawMaze(t);
     const hx=ox+(hole.c+.5)*cell,hy=oy+(hole.r+.5)*cell;
@@ -228,5 +229,6 @@ recBtn.onclick=async()=>{try{ac();const stream=await navigator.mediaDevices.getU
   mr.start();recBtn.classList.add('recording');recBtn.textContent='🔴 Say NOM NOM!';setTimeout(()=>mr.state!=='inactive'&&mr.stop(),2000)}catch(e){recBtn.textContent='🎤 Mic not allowed';setTimeout(()=>recBtn.textContent='🎤 Record your NOM NOM!',2500)}};
 // test hook
 window.__fm={drawFairy:(...a)=>drawFairy(...a),wave:t=>{waveAt=t},get look(){return LOOK},DEFAULT_LOOK,get cam(){return{camMode,camX,camY,cell,curArea,area:curArea>=0?areas[curArea].name:null,ox,oy}},get state(){return state},get level(){return li},get grid(){return grid},F,hole,levels:()=>({builtin:BUILTIN.length,custom:CUSTOM.length})};
+window.__fmCore={drawFairy:(...a)=>drawFairy(...a),star5,SND,playNom,ac,show,shade,setState:s=>{state=s},get state(){return state},saveName,get name(){return fairyName}};
 layout();requestAnimationFrame(frame);
 })();

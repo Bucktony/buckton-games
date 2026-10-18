@@ -47,3 +47,10 @@ Built-in levels (the 5-level main game) live in `levels/builtin.js` and are gene
   ```
   The fields are name, rectangle `r0,c0,r1,c1`, wall color, and emoji. Walls inside an area use its color. When Floaty enters an area, the camera glides over to frame it (or follows her inside it if the area is bigger than the screen), and a small name banner fades in at the top.
 - `gen_giant.py` regenerates the Giant Adventures set (fixed seeds): `python3 gen_giant.py`.
+
+## Star Gate World (open-world mode)
+- `worldgen.js` is the pure, seeded generator (works in the browser and in Node). A zone is one row of 4 rooms (each 23x15). Zones stack downward and share a wall row, and a single gate in that row leads to the next zone.
+- The 6 themes repeat in this order: Sunflower Meadow, Moon Garden, Rainbow Clouds, Candy Clouds, Seashell Cove, Snowflake Hills.
+- Gate prices: 5, 8, 12, 15, 20, 25, then +5 per zone up to a cap of 100.
+- Guarantee: every zone holds at least price + margin (15%, min 2) stars, and every star, black hole, and gate is reachable. So the stars available before each gate always cover its price. To check: `node sim_world.js` (5 seeds x 32 zones).
+- Saves: localStorage keys `fm_world_0` to `fm_world_2` (seed, opened gates, collected stars, eaten black holes, position, counters).
