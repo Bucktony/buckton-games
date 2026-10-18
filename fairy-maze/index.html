@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1a0b3d">
+<title>Fairy Maze</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%AD%90%3C/text%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#140834;font-family:"Trebuchet MS","Comic Sans MS",system-ui,sans-serif;color:#fff;touch-action:none;overscroll-behavior:none}
+canvas{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+.screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:2.2vh;padding:3vh 4vw;text-align:center;overflow-y:auto;touch-action:pan-y}
+.screen.on{display:flex}
+#mazes{justify-content:flex-start}
+h1{font-size:clamp(40px,9vw,96px);margin:0;color:#ffd6f3;text-shadow:0 0 18px #ff7ad9,0 4px 0 #8a2b8f;letter-spacing:2px}
+h2{font-size:clamp(34px,7vw,72px);margin:0;color:#fff2a8;text-shadow:0 0 14px #ffb84d,0 4px 0 #a0522d}
+.big{font-size:clamp(22px,4.5vw,40px)}
+button{font:inherit;font-weight:bold;border:none;border-radius:999px;cursor:pointer;color:#fff;padding:.5em 1.4em;font-size:clamp(24px,5vw,42px);min-height:72px;min-width:72px;box-shadow:0 6px 0 rgba(0,0,0,.25);transition:transform .1s}
+button:active{transform:translateY(4px) scale(.97);box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.play{background:linear-gradient(#ff7ad9,#d63fb0)}
+.alt{background:linear-gradient(#7ab8ff,#4a6fe0)}
+.rec{background:linear-gradient(#ffb04d,#e66a1f);font-size:clamp(18px,3.6vw,30px)}
+.rec.recording{background:linear-gradient(#ff5050,#c41e1e);animation:pulse 1s infinite}
+@keyframes pulse{50%{transform:scale(1.06)}}
+input#name{font:inherit;font-size:clamp(28px,6vw,48px);text-align:center;border-radius:24px;border:5px solid #ffb8ea;padding:.2em .5em;width:min(90vw,520px);color:#7a1f6a;background:#fff8fd;user-select:text;-webkit-user-select:text}
+.sw{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.sw div{width:clamp(56px,11vw,84px);height:clamp(56px,11vw,84px);border-radius:50%;border:6px solid rgba(255,255,255,.35);cursor:pointer}
+.sw div.sel{border-color:#fff;box-shadow:0 0 0 5px #ffe066,0 0 22px #fff}
+.row{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;align-items:center}
+#preview{width:150px;height:150px;position:static}
+#hud{position:fixed;top:0;left:0;right:0;display:none;justify-content:space-between;align-items:center;padding:max(8px,env(safe-area-inset-top)) 12px 8px;pointer-events:none}
+#hud.on{display:flex}
+#lvl{max-width:52vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hud .pill{background:rgba(255,255,255,.18);border-radius:999px;padding:6px 18px;font-size:clamp(20px,4vw,34px);font-weight:bold}
+#hud button{pointer-events:auto;font-size:28px;min-height:60px;min-width:60px;padding:0 .6em;background:rgba(255,255,255,.25)}
+.mazes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px;width:min(94vw,900px);align-items:start}
+.dress{background:linear-gradient(#ffd166,#f08a24)}
+#dressup{justify-content:flex-start}
+.du{display:flex;gap:3vw;align-items:flex-start;justify-content:center;width:100%;max-width:1100px}
+.duPrev{display:flex;flex-direction:column;align-items:center;gap:12px;position:sticky;top:0}
+#duCanvas{position:static;width:min(38vw,380px);height:min(38vw,380px);background:radial-gradient(circle,#4b2a8a 0,#2a1460 65%,transparent 70%);border-radius:50%}
+.duParts{display:flex;flex-direction:column;gap:12px;flex:1;max-width:620px}
+.part{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.1);border-radius:22px;padding:8px 12px}
+.part .lab{display:flex;flex-direction:column;align-items:center;min-width:76px;font-weight:bold;font-size:clamp(18px,3.4vw,24px)}
+.part .lab span{font-size:clamp(30px,6vw,40px);line-height:1.1}
+.part .sws{display:flex;flex-wrap:wrap;gap:10px}
+.part .sws div{width:clamp(44px,8.5vw,58px);height:clamp(44px,8.5vw,58px);border-radius:50%;border:5px solid rgba(255,255,255,.35);cursor:pointer;touch-action:manipulation}
+.part .sws div.sel{border-color:#fff;box-shadow:0 0 0 4px #ffe066,0 0 16px #fff;transform:scale(1.08)}
+button.small{font-size:clamp(18px,3.6vw,28px)}
+button.hero{font-size:clamp(40px,8vw,72px);padding:.3em 1.1em;box-shadow:0 0 30px rgba(255,122,217,.6),0 6px 0 rgba(0,0,0,.25)}
+button.hero2{font-size:clamp(28px,5.4vw,46px)}
+.contHint{font-size:clamp(18px,3.6vw,28px);color:#fff6c8;min-height:1.2em;font-weight:bold}
+.row.bonus{opacity:.92}.row.bonus button{padding:.35em .8em}
+.mzTip{grid-column:1/-1;font-size:clamp(18px,3.6vw,26px);color:#fff6c8;background:rgba(255,255,255,.1);border-radius:20px;padding:10px 16px;text-align:center}
+@media (orientation:portrait){.du{flex-direction:column;align-items:center}.duPrev{position:sticky;top:-3vh;z-index:2;background:#140834;border-radius:0 0 30px 30px;padding:6px 10px 10px;width:100%}#duCanvas{width:min(46vw,260px);height:min(46vw,260px)}.duParts{width:100%}}
+.world{background:linear-gradient(#8f7bff,#5a3fd6)}
+#worlds{justify-content:flex-start}
+.slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(86vw,260px),1fr));gap:18px;width:min(94vw,960px)}
+.slot{background:rgba(255,255,255,.12);border-radius:28px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:250px;justify-content:center}
+.slot .se{font-size:64px;line-height:1}.slot .sn{font-size:26px;font-weight:bold;color:#fff2a8}.slot .sc{font-size:24px;font-weight:bold;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.slot .st{font-size:18px;opacity:.85}
+.slot button{font-size:clamp(22px,4vw,32px)}.slot button.mini{font-size:18px;min-height:52px;padding:.3em .9em;background:rgba(255,255,255,.2)}
+#whud{position:fixed;top:0;left:0;right:0;display:none;justify-content:space-between;align-items:center;gap:6px;padding:max(8px,env(safe-area-inset-top)) 8px 6px;pointer-events:none;z-index:5}
+#whud.on{display:flex}
+#whud .pill{background:rgba(20,8,52,.55);border-radius:999px;padding:5px 12px;font-size:clamp(17px,3.6vw,30px);font-weight:bold;white-space:nowrap;transition:transform .15s}
+#whud .pill.pop{transform:scale(1.25)}
+#whud button{pointer-events:auto;font-size:26px;min-height:56px;min-width:56px;padding:0 .5em;background:rgba(255,255,255,.25)}
+@media (max-width:560px){#whud{gap:3px;padding-left:4px;padding-right:4px}#whud .pill{font-size:15px;padding:4px 7px}#whud button{font-size:22px;min-height:46px;min-width:46px;padding:0 .3em}}
+#gatePop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,4,30,.55);z-index:10}
+#gatePop.on{display:flex}
+#tpSkip{position:fixed;right:10px;bottom:10px;display:none;z-index:6;font-size:20px;min-height:44px;min-width:44px;padding:0;opacity:.35;background:rgba(0,0,0,.25)}#tpSkip.on{display:block}
+#whud .pill small.tp{font-size:.6em;opacity:.8;margin-left:6px}
+.gp{background:linear-gradient(#5b3aa8,#3a1f7a);border:6px solid #ffe066;border-radius:36px;padding:24px 28px;text-align:center;max-width:92vw;box-shadow:0 0 40px rgba(255,224,102,.5);animation:popin .25s}
+@keyframes popin{from{transform:scale(.6);opacity:0}}
+.gpIcon{font-size:72px;line-height:1.1}.gpText{font-size:clamp(30px,7vw,56px);font-weight:bold;margin:8px 0 18px;color:#fff6c8}
+.gp button{font-size:clamp(26px,6vw,44px)}
+.yes{background:linear-gradient(#5ee08a,#22a85a)}.no{background:linear-gradient(#9aa4c8,#6b7499)}
+.mzh{grid-column:1/-1;font-size:clamp(24px,4.5vw,36px);font-weight:bold;color:#fff2a8;text-align:left;margin-top:8px}
+.mz{background:rgba(255,255,255,.12);border-radius:22px;padding:12px;cursor:pointer;font-size:22px;font-weight:bold}
+.mz canvas{position:static;width:100%;height:auto;border-radius:12px;background:#1d0f4a}
+small{opacity:.75;font-size:clamp(14px,2.6vw,20px)}
+</style>
+</head><body>
+<canvas id="c"></canvas>
+<div id="hud"><button id="homeBtn" aria-label="Home">🏠</button><div class="pill" id="lvl">Level 1</div><div class="pill" id="stars">⭐ 0</div></div>
+
+<div class="screen on" id="start">
+  <h1>Fairy Maze</h1>
+  <canvas id="preview" width="300" height="300"></canvas>
+  <input id="name" maxlength="14" aria-label="Fairy name" autocomplete="off">
+  <div class="row">
+    <button class="play hero" id="playBtn">▶ Play</button>
+    <button class="dress hero2" id="dressBtn">👗 Dress Up</button>
+  </div>
+  <div class="contHint" id="contHint"></div>
+  <div class="row bonus">
+    <button class="world small" id="worldBtn">🌌 My Worlds</button>
+    <button class="alt small" id="mazesBtn">🧩 Bonus Mazes</button>
+    <button class="alt small" id="drawBtn">✏️ Draw-a-Maze</button>
+  </div>
+  <div class="row"><button class="rec" id="recBtn">🎤 Record your NOM NOM!</button><button class="rec" id="recPlay" style="display:none">🔊</button><button class="rec" id="recDel" style="display:none">✖</button></div>
+</div>
+
+<div class="screen" id="dressup">
+  <div class="du">
+    <div class="duPrev"><canvas id="duCanvas" width="420" height="420"></canvas>
+      <div class="row"><button class="alt small" id="duReset">↺ Reset to Floaty</button><button class="play" id="duDone">✔ Done</button></div></div>
+    <div class="duParts" id="duParts"></div>
+  </div>
+</div>
+<div class="screen" id="worlds"><h2>🌌 Star Gate World</h2><div class="slots" id="slots"></div><button class="alt" id="worldsBack">⬅ Back</button></div>
+<div id="whud"><button id="wHome" aria-label="Home">🏠</button><div class="pill" id="wZone">Zone 1</div><div class="pill" id="wStars" title="stars to spend">⭐ 0</div><div class="pill" id="wTotal" title="stars collected">🌟 0</div><div class="pill" id="wHoles" title="black holes eaten">🍩 0</div><div class="pill" id="wTea" title="fairies at the tea party">🧚 0</div></div>
+<button id="tpSkip" aria-label="Skip">⏭</button>
+<div id="gatePop"><div class="gp"><div class="gpIcon" id="gpIcon">🚪</div><div class="gpText" id="gpText"></div><div class="row" id="gpBtns"></div></div></div>
+<div class="screen" id="mazes"><h2>🧩 Bonus Mazes</h2><div class="mazes" id="mazeList"></div><button class="alt" id="mazesBack">⬅ Back</button></div>
+
+<div class="screen" id="yummy"><h2 style="font-size:clamp(56px,13vw,130px)">Yummy!</h2><div class="big" id="yumStars"></div><button class="play" id="nextBtn">Next ▶</button></div>
+
+<div class="screen" id="done"><h1 id="doneTitle">You did it!</h1><div class="big" id="doneStars"></div><canvas id="donePrev" width="300" height="300" style="position:static;width:170px;height:170px"></canvas><button class="play" id="againBtn">🏠 Play again</button></div>
+
+<script src="levels/builtin.js?v=5"></script>
+<script src="levels/custom.js?v=5"></script>
+<script src="game.js?v=5"></script>
+<script src="worldgen.js?v=5"></script>
+<script src="world.js?v=5"></script>
+</body></html>
