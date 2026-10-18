@@ -70,9 +70,9 @@ $('wHome').onclick=()=>stop();
 // ---------- start / stop ----------
 function start(i){slot=i;D=migrate(load(i))||newWorld(i);store(i,D);zones=new Map();collected=new Set(D.collected);eaten=new Set(D.eaten);following=D.following.slice();flyoff=[];scene=null;
   for(let z=0;z<=D.opened;z++)zoneOf(z);rebuild();
-  F={r:D.pos[0],c:D.pos[1],x:D.pos[1],y:D.pos[0],path:[],dir:1,bump:0,bx:0,by:0,cheek:0};
+  F={r:D.pos[0],c:D.pos[1],x:D.pos[1],y:D.pos[0],seg:null,path:[],dir:1,bump:0,bx:0,by:0,cheek:0};
   if(!passable(F.r,F.c)){const Z=zoneOf(D.opened);F.r=F.y=Z.entry[0]+Z.r0;F.c=F.x=Z.entry[1]+Z.c0}
-  trail=[{x:F.x,y:F.y}];parts=[];flyers=[];cele=null;mode='walk';keyDir=null;target=null;curRoom=null;camRoom=null;popBlock=false;
+  trail=[{x:F.x,y:F.y}];parts=[];flyers=[];cele=null;mode='walk';keyDir=null;Core.mvReset(MV);target=null;curRoom=null;camRoom=null;popBlock=false;
   Core.setState('world');Core.show('__world');$('whud').classList.add('on');active=true;layout();roomCheck(true);snap();hud();last=performance.now();requestAnimationFrame(loop)}
 function stop(){save();active=false;$('whud').classList.remove('on');$('gatePop').classList.remove('on');Core.setState('menu');Core.show('start')}
 // ---------- layout & camera ----------
@@ -91,22 +91,20 @@ function roomCheck(silent){const R=roomOf(F.r,F.c);const id=R.rx+':'+R.ry;if(id=
 function tone(f,t0,dur,vol){Core.SND&&Core.ac();const a=Core.ac();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,a.currentTime+t0);g.gain.linearRampToValueAtTime(vol,a.currentTime+t0+.01);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+t0+dur);o.connect(g).connect(a.destination);o.start(a.currentTime+t0);o.stop(a.currentTime+t0+dur+.05)}
 // ---------- input ----------
 const KEYS={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
-addEventListener('keydown',e=>{if(active&&scene&&performance.now()/1000-scene.t0>.4){skipScene();e.preventDefault();return}if(!active||mode!=='walk'||!KEYS[e.key])return;keyDir=KEYS[e.key];target=null;e.preventDefault();Core.ac()});
-addEventListener('keyup',e=>{if(KEYS[e.key]&&keyDir===KEYS[e.key])keyDir=null});
+const MV=Core.makeMover();
+addEventListener('keydown',e=>{if(active&&scene&&performance.now()/1000-scene.t0>.4){skipScene();e.preventDefault();return}if(!active||mode!=='walk'||!KEYS[e.key])return;if(!e.repeat)Core.mvKeyDown(MV,KEYS[e.key],performance.now());keyDir=KEYS[e.key];target=null;e.preventDefault();Core.ac()});
+addEventListener('keyup',e=>{if(KEYS[e.key]){Core.mvKeyUp(MV,KEYS[e.key]);if(keyDir===KEYS[e.key])keyDir=null}});
 const toCell=e=>({r:(e.clientY-OY())/cell-.5,c:(e.clientX-OX())/cell-.5});
-cv.addEventListener('pointerdown',e=>{if(active&&scene){if(performance.now()/1000-scene.t0>.3)skipScene();return}if(!active||mode!=='walk')return;down=true;Core.ac();lastPtr={clientX:e.clientX,clientY:e.clientY};target=toCell(e);keyDir=null;try{cv.setPointerCapture(e.pointerId)}catch(_){}});
+cv.addEventListener('pointerdown',e=>{if(active&&scene){if(performance.now()/1000-scene.t0>.3)skipScene();return}if(!active||mode!=='walk')return;down=true;Core.ac();lastPtr={clientX:e.clientX,clientY:e.clientY};target=toCell(e);keyDir=null;Core.mvReset(MV);try{cv.setPointerCapture(e.pointerId)}catch(_){}});
 cv.addEventListener('pointermove',e=>{if(active&&down){lastPtr={clientX:e.clientX,clientY:e.clientY}}});
 const up=()=>{down=false};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
-function bump(dr,dc){const now=performance.now();if(cellAt(F.r+dr,F.c+dc)==='G'){gateAsk(dr,dc);return}if(now-lastBump<450)return;lastBump=now;F.bump=1;F.bx=dc;F.by=dr;Core.SND.bump()}
-function step(){
-  if(keyDir){const [dr,dc]=keyDir;if(passable(F.r+dr,F.c+dc))return keyDir;bump(dr,dc);return null}
-  if(target){const dy=target.r-F.r,dx=target.c-F.c;if(Math.abs(dx)<.5&&Math.abs(dy)<.5){if(!down)target=null;return null}
-    const o=[],sx=Math.sign(dx),sy=Math.sign(dy);if(Math.abs(dx)>=Math.abs(dy)){if(Math.abs(dx)>=.5)o.push([0,sx]);if(Math.abs(dy)>=.5)o.push([sy,0])}else{if(Math.abs(dy)>=.5)o.push([sy,0]);if(Math.abs(dx)>=.5)o.push([0,sx])}
-    for(const d of o)if(passable(F.r+d[0],F.c+d[1]))return d;if(o.length)bump(o[0][0],o[0][1]);if(!down)target=null;return null}
-  return null}
+function mvStep(sp){return Core.mvAdvance(F,sp)}
+function bump(dr,dc){const now=performance.now();if(cellAt(F.r+dr,F.c+dc)==='G'){gateAsk(dr,dc);return}if(now-lastBump<350)return;lastBump=now;F.bump=1;F.bx=dc;F.by=dr;Core.SND.bump()}
+function step(){const r=Core.mvChoose(MV,F,passable,target,down,performance.now());if(!r)return null;
+  if(r.arrived){if(!down)target=null;return null}if(r.bump){bump(r.bump[0],r.bump[1]);if(!down&&!MV.held.length)target=null;return null}return r}
 // ---------- gates ----------
 let gateZ=-1,popUntil=0;
-function gateAsk(dr,dc){if(mode!=='walk')return;const gb=bnd.get(k(F.r+dr,F.c+dc));if(!gb||gb.type!=='gate')return;if(performance.now()<popUntil){const now=performance.now();if(now-lastBump>450){lastBump=now;F.bump=1;F.bx=dc;F.by=dr;Core.SND.bump()}return}const zz=gb.z;gateZ=zz;const p=zoneOf(zz).price;mode='popup';keyDir=null;target=null;down=false;
+function gateAsk(dr,dc){if(mode!=='walk')return;const gb=bnd.get(k(F.r+dr,F.c+dc));if(!gb||gb.type!=='gate')return;if(performance.now()<popUntil){const now=performance.now();if(now-lastBump>450){lastBump=now;F.bump=1;F.bx=dc;F.by=dr;Core.SND.bump()}return}const zz=gb.z;gateZ=zz;const p=zoneOf(zz).price;mode='popup';keyDir=null;Core.mvReset(MV);target=null;down=false;
   const pop=$('gatePop'),btns=$('gpBtns');btns.innerHTML='';
   if(D.stars>=p){$('gpIcon').textContent='🚪✨';$('gpText').innerHTML=`Open for ${p} ⭐?`;
     const y=document.createElement('button');y.className='yes';y.textContent='✅ Yes!';y.onclick=()=>{pop.classList.remove('on');buyGate(zz)};
@@ -214,14 +212,14 @@ function drawFlyoff(t,dt){for(const f of flyoff){const u=t-f.t0;f.x+=Math.sin(u*
   if(Math.random()<.4)parts.push({x:f.x,y:f.y+cell*.3,vx:Math.random()-.5,vy:Math.random(),life:.7,c:'#fff6a8',s:3})}
   if(flyoff.length){const u=t-flyoff[0].t0;if(u<2.2){ctx.save();const fs=Math.max(22,Math.min(40,W/14));ctx.font=`bold ${fs}px "Trebuchet MS",sans-serif`;ctx.textAlign='center';ctx.lineWidth=fs*.15;ctx.strokeStyle='#fff';ctx.fillStyle='#ff4fa8';const ty=top+fs*2.2;ctx.strokeText('Bye bye! 👋',W/2,ty);ctx.fillText('Bye bye! 👋',W/2,ty);ctx.restore()}}
   flyoff=flyoff.filter(f=>t-f.t0<3.4)}
-function teaPartyTime(){mode='popup';keyDir=null;target=null;down=false;const pop=$('gatePop'),btns=$('gpBtns');btns.innerHTML='';
+function teaPartyTime(){mode='popup';keyDir=null;Core.mvReset(MV);target=null;down=false;const pop=$('gatePop'),btns=$('gpBtns');btns.innerHTML='';
   $('gpIcon').textContent='🧚🫖🧚';$('gpText').innerHTML="We're going to the fairy tea party!<br>See you soon!";
   const o=document.createElement('button');o.className='yes';o.textContent='👋 Bye bye!';o.onclick=()=>{pop.classList.remove('on');waveGoodbye()};btns.append(o);pop.classList.add('on');Core.SND.flap()}
 function waveGoodbye(){const t=performance.now()/1000;following.forEach((id,i)=>{const p=orbitPos(i,t);flyoff.push({id,i,t0:t,x:OX()+p.x*cell,y:OY()+p.y*cell})});
   D.party.push(...following);following=[];mode='walk';popUntil=performance.now()+600;Core.SND.yay();[0,.12,.24,.36].forEach((d,i)=>tone(880*[1,1.25,1.5,2][i],d,.3,.05));hud('wTea');save()}
 // ---------- big moments: NOM, tea meet, tea party ----------
 const SCENE_LEN={nom:3.1,tea:3.4,party:3.8};
-function startScene(type,o){mode='scene';keyDir=null;target=null;down=false;F.path=[];scene={type,t0:performance.now()/1000,bites:0,...o};
+function startScene(type,o){mode='scene';keyDir=null;Core.mvReset(MV);target=null;down=false;F.path=[];scene={type,t0:performance.now()/1000,bites:0,...o};
   if(type==='tea'){Core.SND.flap();[0,.15,.3].forEach((d,i)=>tone([660,880,1100][i],d,.35,.05))}
   if(type==='party'){Core.SND.yay()}}
 function skipScene(){if(!scene)return;const s=scene;scene=null;F.cheek=0;
@@ -286,13 +284,12 @@ function arrive(){const key=k(F.r,F.c);roomCheck();
 let last=0;
 function loop(now){if(!active)return;const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
   if(down&&lastPtr&&mode==='walk')target=toCell(lastPtr);
-  if(mode==='walk'){if(!F.path.length){const s=step();if(s){F.path.push([F.r+s[0],F.c+s[1]]);if(s[1])F.dir=s[1]}}
-    if(F.path.length){const [nr,nc]=F.path[0],sp=6.5*speed*dt,dx=nc-F.x,dy=nr-F.y,d=Math.hypot(dx,dy);
-      if(d<=sp){F.x=nc;F.y=nr;F.r=nr;F.c=nc;F.path.shift();pushTrail();arrive()}else{F.x+=dx/d*sp;F.y+=dy/d*sp;pushTrail()}
+  if(mode==='walk'){if(!F.path.length){const s=step();if(s){F.path.push([F.r+s.d[0],F.c+s.d[1],s.slide]);if(s.d[1])F.dir=s.d[1]}}
+    if(F.path.length){if(mvStep(6.5*speed*dt)){pushTrail();arrive()}else pushTrail()
       if(Math.random()<.5)parts.push({x:OX()+(F.x+.5)*cell-F.dir*cell*.2,y:OY()+(F.y+.6)*cell,vx:Math.random()-.5,vy:Math.random()*.5,life:.8,c:['#fff6a8','#ffd1f2','#bfe8ff'][Math.random()*3|0],s:Math.random()*3+2})}}
   const [tx,ty]=camTarget(),kk=Math.min(1,dt*3.2);camX+=(tx-camX)*kk;camY+=(ty-camY)*kk;
   frameDraw(t,dt);if(scene)drawScene(t,dt);if(now-saveT>1500)save(now);requestAnimationFrame(loop)}
 addEventListener('pagehide',()=>{if(active)save()});document.addEventListener('visibilitychange',()=>{if(active&&document.hidden)save()});
 // test hook
-window.__world={get bnd(){return bnd},roomOf,themeAt,get D(){return D},get F(){return F},get mode(){return mode},get active(){return active},cellAt,passable,starAt,holeAt,zoneOf,set speed(v){speed=v},get room(){return curRoom},collected:()=>collected,eaten:()=>eaten,G,get following(){return following},get scene(){return scene},get trail(){return trail},orbitPos,screenOf:()=>({x:OX()+(F.x+.5)*cell,y:OY()+(F.y+.5)*cell,cell}),nookCell,skipScene,get flyoff(){return flyoff}};
+window.__world={get bnd(){return bnd},roomOf,themeAt,get D(){return D},get F(){return F},get mode(){return mode},get active(){return active},cellAt,passable,starAt,holeAt,zoneOf,set speed(v){speed=v},MV,get room(){return curRoom},collected:()=>collected,eaten:()=>eaten,G,get following(){return following},get scene(){return scene},get trail(){return trail},orbitPos,screenOf:()=>({x:OX()+(F.x+.5)*cell,y:OY()+(F.y+.5)*cell,cell}),nookCell,skipScene,get flyoff(){return flyoff}};
 })();

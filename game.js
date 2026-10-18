@@ -24,7 +24,7 @@ function tone(f,t0,dur,type='sine',vol=.18,f2){const a=ac();if(!a)return;const o
 function noise(t0,dur,vol=.3,freq=600){const a=ac();if(!a)return;const b=a.createBuffer(1,a.sampleRate*dur,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);const s=a.createBufferSource();s.buffer=b;const f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=freq;const g=a.createGain();g.gain.value=vol;s.connect(f).connect(g).connect(a.destination);s.start(a.currentTime+t0)}
 const SND={
  star(){const n=[1047,1319,1568,2093];n.forEach((f,i)=>tone(f,i*.06,.35,'triangle',.12))},
- bump(){tone(260,0,.18,'sine',.2,140)},
+ bump(){tone(520,0,.09,'sine',.045,400)},  // soft quiet boop
  nomSynth(){for(let k=0;k<2;k++){noise(k*.22,.12,.5,500);tone(200,k*.22,.14,'square',.08,90)}},
  yay(){[523,659,784,1047,784,1047].forEach((f,i)=>tone(f,i*.11,.4,'triangle',.14))},
  flap(){tone(1800+Math.random()*900,0,.12,'sine',.03)},
@@ -40,7 +40,7 @@ function loadLevel(lv){
   const portrait=innerHeight>innerWidth;areas=(lv.areas||[]).map(a=>({...a}));if((g.length<w)===portrait&&g.length!==w){g=Array.from({length:w},(_,c)=>g.map(r=>r[c]).join(''));areas=areas.map(a=>({...a,r0:a.c0,c0:a.r0,r1:a.c1,c1:a.r1}))}
   grid=g.map(r=>r.split(''));R=grid.length;C=grid[0].length;stars=[];
   for(let r=0;r<R;r++)for(let c=0;c<C;c++){const ch=grid[r][c];if(ch==='S'){F.r=r;F.c=c;F.x=c;F.y=r}if(ch==='E'){hole.r=r;hole.c=c}if(ch==='*')stars.push({r,c,got:false,ph:Math.random()*6})}
-  curArea=-1;banner=null;F.path=[];F.bump=0;F.cheek=0;F.dir=1;hole.size=1;hole.bites=0;levelStars=0;state='play';parts=[];target=null;
+  curArea=-1;banner=null;F.path=[];F.seg=null;mvReset(MV);F.bump=0;F.cheek=0;F.dir=1;hole.size=1;hole.bites=0;levelStars=0;state='play';parts=[];target=null;
   $("lvl").textContent=playlist===BUILTIN?`Level ${li+1}`:lv.name;updHud();layout();areaCheck();snapCam();
 }
 const open=(r,c)=>r>=0&&c>=0&&r<R&&c<C&&grid[r][c]!=='#';
@@ -69,24 +69,56 @@ function snapCam(){if(!grid||!camMode)return;[camX,camY]=camTarget();ox=-camX;oy
 function updCam(dt){if(!camMode)return;const[tx,ty]=camTarget();const k=Math.min(1,dt*3.2);camX+=(tx-camX)*k;camY+=(ty-camY)*k;ox=Math.round(-camX);oy=Math.round(viewTop-camY)}
 function areaColor(r,c){const i=areaAt(r,c);return i<0?null:areas[i].color}
 function updHud(){$('stars').textContent='⭐ '+(totalStars)}
+// ---------- movement assists (shared by every mode) ----------
+// 1) corner sliding: pushing into a wall with an opening exactly 1 tile to the side slides her over (eased) and through
+// 2) buffered turns: a pressed/aimed direction that is blocked is remembered ~350 ms and taken as soon as it opens
+// 3) bumps: one soft quiet boop per contact, silent when a slide or buffered turn catches the input
+// No autopilot: with no input held (and no fresh buffered turn) she stops.
+const BUF_MS=380;
+function makeMover(){return{held:[],buf:null,lastDir:null,lastT:0,contact:''}}
+const same=(a,b)=>a&&b&&a[0]===b[0]&&a[1]===b[1];
+function mvKeyDown(m,d,now){m.held=m.held.filter(x=>!same(x,d));m.held.push(d);m.buf={d,until:now+BUF_MS};m.contact=''}
+function mvKeyUp(m,d,now){m.held=m.held.filter(x=>!same(x,d));if(m.buf&&same(m.buf.d,d))m.buf.until=Math.max(m.buf.until,(now||performance.now())+BUF_MS)}  // remembered from release
+function mvReset(m){m.held=[];m.buf=null;m.contact=''}
+function corner(m,F,d,open,now){const [dr,dc]=d,back=m.lastDir&&now-m.lastT<700?[-m.lastDir[0],-m.lastDir[1]]:null,sides=[[dc,dr],[-dc,-dr]].filter(([sr,sc])=>open(F.r+sr,F.c+sc)&&open(F.r+sr+dr,F.c+sc+dc)&&!same([sr,sc],back));
+  if(!sides.length)return null;if(sides.length===2&&m.lastDir&&now-m.lastT<700){const p=sides.find(s=>same(s,m.lastDir));if(p)return p}return sides[0]}
+// returns {d,slide} to step, {bump:d} for a (new-contact) bump, or null
+function mvChoose(m,F,open,target,down,now){
+  const took=(d,slide)=>{m.lastDir=d;m.lastT=now;m.contact='';return{d,slide:!!slide}};
+  const bumpOnce=d=>{const key=F.r+','+F.c+','+d;if(m.contact===key)return null;m.contact=key;return{bump:d}};
+  if(m.buf&&now>m.buf.until)m.buf=null;
+  if(m.held.length||m.buf){
+    const latest=m.held.length?m.held[m.held.length-1]:m.buf.d;
+    if(m.buf&&open(F.r+m.buf.d[0],F.c+m.buf.d[1])){const d=m.buf.d;m.buf=null;return took(d)}
+    if(open(F.r+latest[0],F.c+latest[1]))return took(latest);
+    const s=corner(m,F,latest,open,now);if(s){if(!m.buf)m.buf={d:latest,until:now+BUF_MS};else m.buf.until=Math.max(m.buf.until,now+BUF_MS);return took(s,true)}
+    for(let i=m.held.length-2;i>=0;i--){const d=m.held[i];if(open(F.r+d[0],F.c+d[1])){if(!m.buf||!same(m.buf.d,latest))m.buf={d:latest,until:now+BUF_MS};return took(d)}}  // keep going, turn when it opens
+    if(!m.held.length)return null;          // released: no autopilot
+    return bumpOnce(latest)}
+  if(target){const dy=target.r-F.r,dx=target.c-F.c;if(Math.abs(dx)<.5&&Math.abs(dy)<.5)return{arrived:true};
+    const o=[],sx=Math.sign(dx),sy=Math.sign(dy);
+    if(Math.abs(dx)>=Math.abs(dy)){if(Math.abs(dx)>=.5)o.push([0,sx]);if(Math.abs(dy)>=.5)o.push([sy,0])}else{if(Math.abs(dy)>=.5)o.push([sy,0]);if(Math.abs(dx)>=.5)o.push([0,sx])}
+    for(const d of o)if(open(F.r+d[0],F.c+d[1]))return took(d);
+    for(const d of o){const s=corner(m,F,d,open,now);if(s)return took(s,true)}
+    return o.length?bumpOnce(o[0]):null}
+  return null}
+// eased glide along one step: linear in corridors, smooth in-out for slides
+function mvAdvance(F,sp){const [nr,nc,slide]=F.path[0];if(!F.seg)F.seg={x0:F.x,y0:F.y,u:0};const s=F.seg,len=Math.hypot(nc-s.x0,nr-s.y0)||1;
+  s.u=Math.min(1,s.u+sp*(slide?.85:1)/len);const e=slide?s.u*s.u*(3-2*s.u):s.u;F.x=s.x0+(nc-s.x0)*e;F.y=s.y0+(nr-s.y0)*e;
+  if(s.u>=1){F.x=nc;F.y=nr;F.r=nr;F.c=nc;F.path.shift();F.seg=null;return true}return false}
 // ---------- input ----------
 const KEYS={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
-addEventListener('keydown',e=>{if(KEYS[e.key]&&state==='play'){keyDir=KEYS[e.key];target=null;e.preventDefault();ac()}});
-addEventListener('keyup',e=>{if(KEYS[e.key]&&keyDir===KEYS[e.key])keyDir=null});
+const MV=makeMover();
+addEventListener('keydown',e=>{if(KEYS[e.key]&&state==='play'){if(!e.repeat)mvKeyDown(MV,KEYS[e.key],performance.now());keyDir=KEYS[e.key];target=null;e.preventDefault();ac()}});
+addEventListener('keyup',e=>{if(KEYS[e.key]){mvKeyUp(MV,KEYS[e.key]);if(keyDir===KEYS[e.key])keyDir=null}});
 let down=false;
 function toCell(e){return{r:(e.clientY-oy)/cell-.5,c:(e.clientX-ox)/cell-.5}}
-cv.addEventListener('pointerdown',e=>{if(state!=='play')return;down=true;ac();lastPtr={clientX:e.clientX,clientY:e.clientY};target=toCell(e);keyDir=null;cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointerdown',e=>{if(state!=='play')return;down=true;ac();lastPtr={clientX:e.clientX,clientY:e.clientY};target=toCell(e);keyDir=null;mvReset(MV);MV.contact='';cv.setPointerCapture(e.pointerId)});
 cv.addEventListener('pointermove',e=>{if(down&&state==='play'){lastPtr={clientX:e.clientX,clientY:e.clientY};target=toCell(e)}});
 const up=()=>{down=false};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
-function bump(dr,dc){const now=performance.now();if(now-lastBump<450)return;lastBump=now;F.bump=1;F.bx=dc;F.by=dr;SND.bump()}
-function chooseStep(){
-  if(keyDir){const [dr,dc]=keyDir;if(open(F.r+dr,F.c+dc))return[dr,dc];bump(dr,dc);return null}
-  if(target){const dy=target.r-F.r,dx=target.c-F.c;if(Math.abs(dx)<.5&&Math.abs(dy)<.5){if(!down)target=null;return null}
-    const opts=[];const sx=Math.sign(dx),sy=Math.sign(dy);
-    if(Math.abs(dx)>=Math.abs(dy)){if(Math.abs(dx)>=.5)opts.push([0,sx]);if(Math.abs(dy)>=.5)opts.push([sy,0])}else{if(Math.abs(dy)>=.5)opts.push([sy,0]);if(Math.abs(dx)>=.5)opts.push([0,sx])}
-    for(const o of opts)if(open(F.r+o[0],F.c+o[1]))return o;
-    if(opts.length)bump(opts[0][0],opts[0][1]);if(!down)target=null;return null}
-  return null}
+function bump(dr,dc){const now=performance.now();if(now-lastBump<350)return;lastBump=now;F.bump=1;F.bx=dc;F.by=dr;SND.bump()}
+function chooseStep(){const r=mvChoose(MV,F,open,target,down,performance.now());if(!r)return null;
+  if(r.arrived){if(!down)target=null;return null}if(r.bump){bump(r.bump[0],r.bump[1]);if(!down&&!MV.held.length)target=null;return null}return r}
 // ---------- particles ----------
 function burst(x,y,n,cols,sp=4){for(let i=0;i<n;i++){const a=Math.random()*6.28,v=Math.random()*sp+1;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1,c:cols[i%cols.length],s:Math.random()*5+3,st:Math.random()<.6})}}
 // ---------- drawing ----------
@@ -160,8 +192,8 @@ function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/
     if(state==='play'){
       // movement
       const moving=F.path.length>0;
-      if(!moving){const st=chooseStep();if(st){F.path.push([F.r+st[0],F.c+st[1]]);if(st[1])F.dir=st[1]}}
-      if(F.path.length){const [nr,nc]=F.path[0];const sp=6.5*dt;const dx=nc-F.x,dy=nr-F.y,d=Math.hypot(dx,dy);if(d<=sp){F.x=nc;F.y=nr;F.r=nr;F.c=nc;F.path.shift();areaCheck();arrive()}else{F.x+=dx/d*sp;F.y+=dy/d*sp}
+      if(!moving){const st=chooseStep();if(st){F.path.push([F.r+st.d[0],F.c+st.d[1],st.slide]);if(st.d[1])F.dir=st.d[1]}}
+      if(F.path.length){if(mvAdvance(F,6.5*dt)){areaCheck();arrive()}
         if(Math.random()<.5)parts.push({x:ox+(F.x+.5)*cell-F.dir*cell*.2,y:oy+(F.y+.6)*cell,vx:(Math.random()-.5),vy:Math.random()*.5,life:1,c:['#fff6a8','#ffd1f2','#bfe8ff'][Math.random()*3|0],s:Math.random()*4+2,st:true})}
       drawHole(hx,hy,cell*.6*(1+.05*Math.sin(t*3)),t,1);
     }else{ // nom sequence
@@ -229,6 +261,6 @@ recBtn.onclick=async()=>{try{ac();const stream=await navigator.mediaDevices.getU
   mr.start();recBtn.classList.add('recording');recBtn.textContent='🔴 Say NOM NOM!';setTimeout(()=>mr.state!=='inactive'&&mr.stop(),2000)}catch(e){recBtn.textContent='🎤 Mic not allowed';setTimeout(()=>recBtn.textContent='🎤 Record your NOM NOM!',2500)}};
 // test hook
 window.__fm={drawFairy:(...a)=>drawFairy(...a),wave:t=>{waveAt=t},get look(){return LOOK},DEFAULT_LOOK,get cam(){return{camMode,camX,camY,cell,curArea,area:curArea>=0?areas[curArea].name:null,ox,oy}},get state(){return state},get level(){return li},get grid(){return grid},F,hole,levels:()=>({builtin:BUILTIN.length,custom:CUSTOM.length})};
-window.__fmCore={drawFairy:(...a)=>drawFairy(...a),star5,SND,playNom,ac,show,shade,setState:s=>{state=s},get state(){return state},saveName,get name(){return fairyName}};
+window.__fmCore={makeMover,mvKeyDown,mvKeyUp,mvReset,mvChoose,mvAdvance,drawFairy:(...a)=>drawFairy(...a),star5,SND,playNom,ac,show,shade,setState:s=>{state=s},get state(){return state},saveName,get name(){return fairyName}};
 layout();requestAnimationFrame(frame);
 })();
